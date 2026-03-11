@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma"
 
 export async function GET(
   request: Request,
-  { params }: { params: { conversationId: string } }
+  context: { params: Promise<{ conversationId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -14,9 +14,14 @@ export async function GET(
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
+    const params = await context.params
+    const conversationId = params.conversationId
+
+    console.log('Fetching messages for conversation:', conversationId)
+
     const messages = await prisma.message.findMany({
       where: {
-        conversationId: params.conversationId
+        conversationId: conversationId
       },
       include: {
         sender: {
@@ -45,29 +50,43 @@ export async function GET(
 
     return NextResponse.json(messages)
   } catch (error) {
-    console.log(error, 'MESSAGES_GET_ERROR')
-    return new NextResponse("Internal Error", { status: 500 })
+    console.error('MESSAGES_GET_ERROR:', error)
+    console.error('Error details:', error instanceof Error ? error.message : String(error))
+    return NextResponse.json({ 
+      error: 'Internal Error', 
+      details: error instanceof Error ? error.message : String(error) 
+    }, { status: 500 })
   }
 }
 
 export async function POST(
   request: Request,
-  { params }: { params: { conversationId: string } }
+  context: { params: Promise<{ conversationId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
-    const body = await request.json()
-    const { message, image } = body
 
     if (!session?.user?.id) {
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
+    const params = await context.params
+    const conversationId = params.conversationId
+
+    const body = await request.json()
+    const { message, image } = body
+
+    console.log('Creating message:', { 
+      conversationId: conversationId, 
+      senderId: session.user.id,
+      messageContent: message 
+    })
+
     const newMessage = await prisma.message.create({
       data: {
         content: message,
         image: image,
-        conversationId: params.conversationId,
+        conversationId: conversationId,
         senderId: session.user.id,
         seenBy: {
           create: {
@@ -99,16 +118,23 @@ export async function POST(
 
     await prisma.conversation.update({
       where: {
-        id: params.conversationId
+        id: conversationId
       },
       data: {
         updatedAt: new Date()
       }
     })
 
+    console.log('Message created successfully:', newMessage.id)
+
     return NextResponse.json(newMessage)
   } catch (error) {
-    console.log(error, 'MESSAGES_POST_ERROR')
-    return new NextResponse("Internal Error", { status: 500 })
+    console.error('MESSAGES_POST_ERROR:', error)
+    console.error('Error details:', error instanceof Error ? error.message : String(error))
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack')
+    return NextResponse.json({ 
+      error: 'Internal Error', 
+      details: error instanceof Error ? error.message : String(error) 
+    }, { status: 500 })
   }
 }

@@ -6,12 +6,16 @@ import { useRouter } from 'next/navigation'
 import ConversationList from '@/components/chat/ConversationList'
 import ChatWindow from '@/components/chat/ChatWindow'
 import UserList from '@/components/chat/UserList'
+import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 
 export default function ChatPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
   const [showUserList, setShowUserList] = useState(false)
+
+  // Update online status
+  useOnlineStatus()
 
   useEffect(() => {
     if (status === 'unauthenticated') {
