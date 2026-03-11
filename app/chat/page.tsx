@@ -49,7 +49,6 @@ export default function ChatPage() {
         ) : (
           <div className="h-full flex items-center justify-center bg-gray-50">
             <div className="text-center">
-              <div className="text-6xl mb-4">💬</div>
               <h2 className="text-2xl font-semibold text-gray-800 mb-2">
                 Welcome to Let&apos;s Chat
               </h2>
