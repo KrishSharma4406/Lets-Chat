@@ -21,8 +21,8 @@ export default function ChatPage() {
 
   if (status === 'loading') {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-xl text-gray-600">Loading...</div>
+      <div className="h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <div className="text-xl text-gray-600 dark:text-gray-400">Loading...</div>
       </div>
     )
   }
@@ -32,9 +32,9 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="h-screen flex bg-gray-100">
+    <div className="h-screen flex bg-gray-100 dark:bg-gray-900">
       {/* Sidebar */}
-      <div className="w-full md:w-96 bg-white border-r border-gray-200 flex flex-col">
+      <div className="w-full md:w-96 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
         <ConversationList
           selectedConversation={selectedConversation}
           onSelectConversation={setSelectedConversation}
@@ -47,12 +47,12 @@ export default function ChatPage() {
         {selectedConversation ? (
           <ChatWindow conversationId={selectedConversation} />
         ) : (
-          <div className="h-full flex items-center justify-center bg-gray-50">
+          <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
             <div className="text-center">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-2">
+              <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
                 Welcome to Let&apos;s Chat
               </h2>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-400">
                 Select a conversation or start a new chat to begin messaging
               </p>
             </div>

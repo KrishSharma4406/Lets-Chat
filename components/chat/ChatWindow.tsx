@@ -84,11 +84,11 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-gray-500">
+          <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
             No messages yet. Start the conversation!
           </div>
         ) : (
@@ -103,18 +103,18 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
                   className={`max-w-xs md:max-w-md lg:max-w-lg xl:max-w-xl px-4 py-2 rounded-2xl ${
                     isOwnMessage
                       ? 'bg-indigo-600 text-white'
-                      : 'bg-white text-gray-900 border border-gray-200'
+                      : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700'
                   }`}
                 >
                   {!isOwnMessage && (
-                    <p className="text-xs font-semibold mb-1 text-gray-600">
+                    <p className="text-xs font-semibold mb-1 text-gray-600 dark:text-gray-400">
                       {message.sender.name || message.sender.email}
                     </p>
                   )}
                   <p className="wrap-break-word">{message.content}</p>
                   <p
                     className={`text-xs mt-1 ${
-                      isOwnMessage ? 'text-indigo-200' : 'text-gray-500'
+                      isOwnMessage ? 'text-indigo-200' : 'text-gray-500 dark:text-gray-400'
                     }`}
                   >
                     {format(new Date(message.createdAt), 'HH:mm')}
@@ -128,7 +128,7 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
       </div>
 
       {/* Message Input */}
-      <div className="border-t border-gray-200 bg-white p-4">
+      <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
         <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
           <input
             type="text"
@@ -136,7 +136,7 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type a message..."
             disabled={sending}
-            className="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50"
+            className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50"
           />
           <button
             type="submit"

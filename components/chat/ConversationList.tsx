@@ -84,29 +84,29 @@ export default function ConversationList({
   return (
     <>
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-white">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-white dark:bg-gray-800">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-semibold">
+          <div className="w-10 h-10 rounded-full bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold">
             {session?.user?.name?.[0]?.toUpperCase() || 'U'}
           </div>
           <div>
-            <h2 className="font-semibold text-gray-900">{session?.user?.name}</h2>
-            <p className="text-xs text-gray-500">{session?.user?.email}</p>
+            <h2 className="font-semibold text-gray-900 dark:text-white">{session?.user?.name}</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{session?.user?.email}</p>
           </div>
         </div>
         <button
           onClick={() => signOut({ callbackUrl: '/auth' })}
-          className="text-sm text-gray-600 hover:text-gray-900 px-3 py-1 rounded-lg hover:bg-gray-100"
+          className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 px-3 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
         >
           Logout
         </button>
       </div>
 
       {/* New Chat Button */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={onNewChat}
-          className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center space-x-2"
+          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
         >
           <span className="text-xl">+</span>
           <span>New Chat</span>
@@ -116,9 +116,9 @@ export default function ConversationList({
       {/* Conversations List */}
       <div className="flex-1 overflow-y-auto">
         {loading ? (
-          <div className="p-4 text-center text-gray-500">Loading...</div>
+          <div className="p-4 text-center text-gray-500 dark:text-gray-400">Loading...</div>
         ) : conversations.length === 0 ? (
-          <div className="p-4 text-center text-gray-500">
+          <div className="p-4 text-center text-gray-500 dark:text-gray-400">
             No conversations yet
           </div>
         ) : (
@@ -126,8 +126,8 @@ export default function ConversationList({
             <div
               key={conversation.id}
               onClick={() => onSelectConversation(conversation.id)}
-              className={`p-4 border-b border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors ${
-                selectedConversation === conversation.id ? 'bg-indigo-50' : ''
+              className={`p-4 border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                selectedConversation === conversation.id ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''
               }`}
             >
               <div className="flex items-start space-x-3">
@@ -136,14 +136,14 @@ export default function ConversationList({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-semibold text-gray-900 truncate">
+                    <h3 className="font-semibold text-gray-900 dark:text-white truncate">
                       {getConversationName(conversation)}
                     </h3>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
                       {format(new Date(conversation.updatedAt), 'HH:mm')}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-600 truncate">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
                     {getLastMessage(conversation)}
                   </p>
                 </div>
