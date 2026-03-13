@@ -74,7 +74,7 @@ export async function POST(
     const conversationId = params.conversationId
 
     const body = await request.json()
-    const { message, image } = body
+    const { message, image, fileName, fileType } = body
 
     console.log('Creating message:', { 
       conversationId: conversationId, 
@@ -84,8 +84,10 @@ export async function POST(
 
     const newMessage = await prisma.message.create({
       data: {
-        content: message,
+        content: message || '',
         image: image,
+        fileName: fileName,
+        fileType: fileType,
         conversationId: conversationId,
         senderId: session.user.id,
         seenBy: {

@@ -88,6 +88,8 @@ model Message {
   id             String       @id @default(cuid())
   content        String
   image          String?
+  fileName       String?
+  fileType       String?
   createdAt      DateTime     @default(now())
   senderId       String
   conversationId String
