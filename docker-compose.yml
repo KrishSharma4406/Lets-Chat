@@ -1,0 +1,39 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lets-chat-web
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/letschat?schema=public
+      NEXTAUTH_URL: http://localhost:3000
+    command: sh -c "npx prisma db push && npm run start"
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: lets-chat-db
+    environment:
+      POSTGRES_DB: letschat
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d letschat"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
