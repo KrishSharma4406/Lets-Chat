@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { format, formatDistanceToNow } from 'date-fns'
+import Image from 'next/image'
 
 interface User {
   id: string
@@ -97,10 +98,10 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
       const response = await fetch('/api/conversations')
       if (response.ok) {
         const conversations = await response.json()
-        const conversation = conversations.find((c: any) => c.id === conversationId)
+            const conversation = conversations.find((c: { id: string }) => c.id === conversationId)
         if (conversation) {
           const other = conversation.participants.find(
-            (p: any) => p.user.id !== session?.user?.id
+            (p: { user: { id: string } }) => p.user.id !== session?.user?.id
           )
           if (other) {
             setOtherUser(other.user)
@@ -142,6 +143,39 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
     setSelectedFile(null)
     setFilePreview(null)
   }, [])
+
+  const handleFileTypeSelect = (accept: string) => {
+    setFileAccept(accept)
+    setShowFileMenu(false)
+    fileInputRef.current?.click()
+  }
+
+  const fileTypeOptions = [
+    {
+      label: 'All Files',
+      accept: 'image/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.zip,.mp4,.mov,.webm,.mp3,.wav,.m4a'
+    },
+    {
+      label: 'Documents',
+      accept: 'application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx'
+    },
+    {
+      label: 'Images',
+      accept: 'image/*'
+    },
+    {
+      label: 'Videos',
+      accept: 'video/*,.mp4,.mov,.webm,.mkv,.avi'
+    },
+    {
+      label: 'Audio',
+      accept: 'audio/*,.mp3,.wav,.m4a,.flac,.aac'
+    },
+    {
+      label: 'Archives',
+      accept: '.zip,.rar,.7z,.tar,.gz'
+    }
+  ]
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -194,7 +228,7 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
       (!message.fileType && message.image.startsWith('data:image'))
     if (isImage) {
       return (
-        <img
+        <Image
           src={message.image}
           alt={message.fileName || 'image'}
           className="max-w-xs rounded-lg mt-2 cursor-pointer"
@@ -322,7 +356,7 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
         {selectedFile && filePreview && (
           <div className="mb-3 flex items-center space-x-3 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
             {selectedFile.type.startsWith('image/') ? (
-              <img src={filePreview} alt="preview" className="h-14 w-14 object-cover rounded" />
+              <Image src={filePreview} alt="preview" className="h-14 w-14 object-cover rounded" />
             ) : (
               <div className="h-14 w-14 bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center rounded">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-7 h-7 text-indigo-600 dark:text-indigo-300">
@@ -352,24 +386,45 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.zip"
+            accept={fileAccept}
             className="hidden"
             aria-label="Attach a file"
             title="Attach a file"
             onChange={handleFileSelect}
           />
-          {/* Attachment button */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={!isOnline}
-            className="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors p-1"
-            aria-label="Attach file"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
-            </svg>
-          </button>
+          
+          {/* File menu button with dropdown */}
+          <div ref={fileMenuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setShowFileMenu(!showFileMenu)}
+              disabled={!isOnline}
+              className="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors p-1 font-bold text-xl hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full w-8 h-8 flex items-center justify-center"
+              aria-label="Attach file"
+              title="Attach files (documents, images, videos, audio, etc.)"
+            >
+              +
+            </button>
+
+            {/* Dropdown menu */}
+            {showFileMenu && (
+              <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 w-48">
+                <div className="py-1">
+                  {fileTypeOptions.map((option) => (
+                    <button
+                      key={option.label}
+                      type="button"
+                      onClick={() => handleFileTypeSelect(option.accept)}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center space-x-3"
+                    >
+                      <span>{option.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           <input
             type="text"
             value={newMessage}
