@@ -37,9 +37,12 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
   const [isOnline, setIsOnline] = useState(true)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [filePreview, setFilePreview] = useState<string | null>(null)
+  const [showFileMenu, setShowFileMenu] = useState(false)
+  const [fileAccept, setFileAccept] = useState('image/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.zip')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const fileMenuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setIsOnline(navigator.onLine)
@@ -47,9 +50,19 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
     const handleOffline = () => setIsOnline(false)
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
+    
+    // Close file menu on outside click
+    const handleClickOutside = (event: MouseEvent) => {
+      if (fileMenuRef.current && !fileMenuRef.current.contains(event.target as Node)) {
+        setShowFileMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
+      document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
 
