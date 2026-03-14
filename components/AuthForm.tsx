@@ -22,7 +22,8 @@ export default function AuthForm() {
 
     try {
       if (isRegister) {
-        const response = await fetch('/api/register', {
+        // Register user
+        const registerResponse = await fetch('/api/register', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -30,42 +31,53 @@ export default function AuthForm() {
           body: JSON.stringify(formData),
         })
 
-        if (!response.ok) {
-          const errorText = await response.text()
+        if (!registerResponse.ok) {
+          const errorText = await registerResponse.text()
           throw new Error(errorText)
         }
 
-        const callback = await signIn('credentials', {
+        // Auto-login after registration
+        const signInResult = await signIn('credentials', {
           email: formData.email,
           password: formData.password,
           redirect: false,
         })
 
-        if (callback?.error) {
-          setError('Invalid credentials')
+        if (signInResult?.error) {
+          setError(signInResult.error || 'Failed to sign in after registration')
+          setIsLoading(false)
+          return
         }
 
-        if (callback?.ok && !callback?.error) {
-          router.push('/chat')
+        if (signInResult?.ok) {
+          // Session is established, redirect
+          window.location.href = '/chat'
         }
       } else {
-        const callback = await signIn('credentials', {
+        // Login user
+        const signInResult = await signIn('credentials', {
           email: formData.email,
           password: formData.password,
           redirect: false,
         })
 
-        if (callback?.error) {
-          setError('Invalid credentials')
+        if (signInResult?.error) {
+          console.error('Sign in error:', signInResult.error)
+          setError(signInResult.error || 'Invalid email or password')
+          setIsLoading(false)
+          return
         }
 
-        if (callback?.ok && !callback?.error) {
-          router.push('/chat')
+        if (signInResult?.ok) {
+          // Wait a moment for session to be established, then redirect
+          setTimeout(() => {
+            window.location.href = '/chat'
+          }, 500)
         }
       }
     } catch (err: unknown) {
+      console.error('Auth error:', err)
       setError(err instanceof Error ? err.message : 'Something went wrong')
-    } finally {
       setIsLoading(false)
     }
   }
@@ -74,9 +86,14 @@ export default function AuthForm() {
     setIsLoading(true)
     setError('')
     try {
-      await signIn(provider, { callbackUrl: '/chat' })
+      // Use signIn with redirect: true for social providers to ensure proper session
+      await signIn(provider, { 
+        callbackUrl: '/chat',
+        redirect: true 
+      })
     } catch (err) {
-      setError('Social login failed')
+      console.error(`${provider} login error:`, err)
+      setError(`Failed to initialize ${provider} login`)
       setIsLoading(false)
     }
   }

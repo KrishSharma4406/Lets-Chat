@@ -16,6 +16,8 @@ services:
     ports:
       - "3000:3000"
     restart: unless-stopped
+    networks:
+      - lets-chat-network
 
   db:
     image: postgres:16-alpine
@@ -34,6 +36,12 @@ services:
       timeout: 3s
       retries: 20
     restart: unless-stopped
+    networks:
+      - lets-chat-network
 
 volumes:
   postgres_data:
+
+networks:
+  lets-chat-network:
+    driver: bridge

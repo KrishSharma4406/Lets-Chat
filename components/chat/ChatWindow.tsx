@@ -33,7 +33,6 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
-  const [isTyping, setIsTyping] = useState(false)
   const [otherUser, setOtherUser] = useState<User | null>(null)
   const [isOnline, setIsOnline] = useState(true)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
