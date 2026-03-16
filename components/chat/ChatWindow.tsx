@@ -35,6 +35,7 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
   const [sending, setSending] = useState(false)
   const [otherUser, setOtherUser] = useState<User | null>(null)
   const [isOnline, setIsOnline] = useState(true)
+  const [isTyping, setIsTyping] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [filePreview, setFilePreview] = useState<string | null>(null)
   const [showFileMenu, setShowFileMenu] = useState(false)

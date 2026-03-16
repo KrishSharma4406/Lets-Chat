@@ -1,4 +1,5 @@
 import { NextAuthOptions } from "next-auth"
+import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
 import GitHubProvider from "next-auth/providers/github"
@@ -6,9 +7,19 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 
+console.log('🔑 NextAuth config loading...');
+console.log('NEXTAUTH_SECRET:', process.env.NEXTAUTH_SECRET ? '✅ present' : '❌ MISSING');
+console.log('NEXTAUTH_URL:', process.env.NEXTAUTH_URL || 'not set');
+console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? '✅ present' : '❌ MISSING');
+console.log('GITHUB_ID:', process.env.GITHUB_ID ? '✅ present' : '❌ MISSING');
+console.log('Prisma:', typeof prisma !== 'undefined' ? '✅ available' : '❌ missing');
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
+    // OAuth providers disabled for debugging CLIENT_FETCH_ERROR
+    // Uncomment after fixing env vars and testing Credentials works
+    /*
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
@@ -19,6 +30,7 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GITHUB_SECRET as string,
       allowDangerousEmailAccountLinking: true,
     }),
+    */
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -26,11 +38,13 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
+        console.log('[Credentials] Authorize called');
         try {
           if (!credentials?.email || !credentials?.password) {
             throw new Error("Email and password are required")
           }
 
+          console.log('[Credentials] Looking up user:', credentials.email);
           const user = await prisma.user.findUnique({
             where: {
               email: credentials.email
@@ -38,22 +52,27 @@ export const authOptions: NextAuthOptions = {
           })
 
           if (!user) {
+            console.log('[Credentials] No user found');
             throw new Error("No user found with this email")
           }
 
           if (!user.password) {
+            console.log('[Credentials] No password hash - social account');
             throw new Error("This account uses social login. Please sign in with your social provider")
           }
 
+          console.log('[Credentials] Comparing password...');
           const isCorrectPassword = await bcrypt.compare(
             credentials.password,
             user.password
           )
 
           if (!isCorrectPassword) {
+            console.log('[Credentials] Invalid password');
             throw new Error("Invalid password")
           }
 
+          console.log('[Credentials] Success, returning user');
           return {
             id: user.id,
             email: user.email,
@@ -108,3 +127,7 @@ export const authOptions: NextAuthOptions = {
     }
   }
 }
+
+const handler = NextAuth(authOptions)
+
+export { handler as default }
