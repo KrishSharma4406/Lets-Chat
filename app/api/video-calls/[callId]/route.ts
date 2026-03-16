@@ -41,7 +41,7 @@ export async function PATCH(
       return new NextResponse("Only recipient can reject call", { status: 403 })
     }
 
-    const updateData: any = { status }
+    const updateData: { status: string; startedAt?: Date; endedAt?: Date; duration?: number } = { status }
 
     if (status === "accepted") {
       updateData.startedAt = new Date()

@@ -7,19 +7,19 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 
-console.log('🔑 NextAuth config loading...');
-console.log('NEXTAUTH_SECRET:', process.env.NEXTAUTH_SECRET ? '✅ present' : '❌ MISSING');
+console.log('NextAuth config loading...');
+console.log('NEXTAUTH_SECRET:', process.env.NEXTAUTH_SECRET ? 'present' : 'MISSING');
 console.log('NEXTAUTH_URL:', process.env.NEXTAUTH_URL || 'not set');
-console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? '✅ present' : '❌ MISSING');
-console.log('GITHUB_ID:', process.env.GITHUB_ID ? '✅ present' : '❌ MISSING');
-console.log('Prisma:', typeof prisma !== 'undefined' ? '✅ available' : '❌ missing');
+console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'present' : 'MISSING');
+console.log('GITHUB_ID:', process.env.GITHUB_ID ? 'present' : 'MISSING');
+console.log('Prisma:', typeof prisma !== 'undefined' ? 'available' : 'missing');
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     // OAuth providers disabled for debugging CLIENT_FETCH_ERROR
     // Uncomment after fixing env vars and testing Credentials works
-    /*
+
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
@@ -30,7 +30,6 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GITHUB_SECRET as string,
       allowDangerousEmailAccountLinking: true,
     }),
-    */
     CredentialsProvider({
       name: "credentials",
       credentials: {

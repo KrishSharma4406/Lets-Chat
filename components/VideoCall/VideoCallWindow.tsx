@@ -33,6 +33,19 @@ export function VideoCallWindow({
 
   const { endCall } = useVideoCall()
 
+  const handleCallEnd = React.useCallback(async () => {
+    try {
+      await endCall(callId, callDuration)
+      setIsCallActive(false)
+      peerRef.current?.destroy()
+      stream?.getTracks().forEach(track => track.stop())
+      remoteStream?.getTracks().forEach(track => track.stop())
+      onCallEnd?.()
+    } catch (err) {
+      console.error('Failed to end call:', err)
+    }
+  }, [endCall, callId, callDuration, stream, remoteStream, onCallEnd])
+
   // Initialize media stream
   useEffect(() => {
     async function initializeMedia() {
@@ -97,7 +110,7 @@ export function VideoCallWindow({
     return () => {
       stream?.getTracks().forEach(track => track.stop())
     }
-  }, [isInitiator])
+  }, [isInitiator, handleCallEnd, stream])
 
   // Call duration tracking
   useEffect(() => {
@@ -109,19 +122,6 @@ export function VideoCallWindow({
 
     return () => clearInterval(interval)
   }, [isCallActive])
-
-  const handleCallEnd = async () => {
-    try {
-      await endCall(callId, callDuration)
-      setIsCallActive(false)
-      peerRef.current?.destroy()
-      stream?.getTracks().forEach(track => track.stop())
-      remoteStream?.getTracks().forEach(track => track.stop())
-      onCallEnd?.()
-    } catch (err) {
-      console.error('Failed to end call:', err)
-    }
-  }
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60)

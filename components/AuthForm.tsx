@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
-import { signIn } from 'next-auth/react'
+import { useState, useEffect } from 'react'
+import { signIn, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
 export default function AuthForm() {
   const router = useRouter()
+  const { status } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [isRegister, setIsRegister] = useState(false)
   const [formData, setFormData] = useState({
@@ -14,6 +15,13 @@ export default function AuthForm() {
     password: ''
   })
   const [error, setError] = useState('')
+
+  // Redirect when session is established
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.push('/chat')
+    }
+  }, [status, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,43 +45,31 @@ export default function AuthForm() {
         }
 
         // Auto-login after registration
-        const signInResult = await signIn('credentials', {
+        const result = await signIn('credentials', {
           email: formData.email,
           password: formData.password,
           redirect: false,
         })
 
-        if (signInResult?.error) {
-          setError(signInResult.error || 'Failed to sign in after registration')
+        if (result?.error) {
+          setError(result.error || 'Failed to sign in after registration')
           setIsLoading(false)
-          return
         }
-
-        if (signInResult?.ok) {
-          // Session is established, redirect
-          window.location.href = '/chat'
-        }
+        // Session will be established and useEffect will handle redirect
       } else {
         // Login user
-        const signInResult = await signIn('credentials', {
+        const result = await signIn('credentials', {
           email: formData.email,
           password: formData.password,
           redirect: false,
         })
 
-        if (signInResult?.error) {
-          console.error('Sign in error:', signInResult.error)
-          setError(signInResult.error || 'Invalid email or password')
+        if (result?.error) {
+          console.error('Sign in error:', result.error)
+          setError(result.error || 'Invalid email or password')
           setIsLoading(false)
-          return
         }
-
-        if (signInResult?.ok) {
-          // Wait a moment for session to be established, then redirect
-          setTimeout(() => {
-            window.location.href = '/chat'
-          }, 500)
-        }
+        // Session will be established and useEffect will handle redirect
       }
     } catch (err: unknown) {
       console.error('Auth error:', err)
@@ -137,7 +133,7 @@ export default function AuthForm() {
                 id="email-address"
                 name="email"
                 type="email"
-                autoComplete="email"
+                autoComplete="off"
                 required
                 className="appearance-none relative block w-full px-3 py-3 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Email address"
@@ -154,7 +150,7 @@ export default function AuthForm() {
                 id="password"
                 name="password"
                 type="password"
-                autoComplete="current-password"
+                autoComplete="off"
                 required
                 className="appearance-none relative block w-full px-3 py-3 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Password"

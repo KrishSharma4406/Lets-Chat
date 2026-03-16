@@ -31,13 +31,12 @@ export function generateKeyPair() {
 export function encryptMessage(message: string, recipientPublicKey: string) {
   try {
     const nonce = nacl.randomBytes(nacl.box.nonceLength)
-    const publicKey = Buffer.from(recipientPublicKey, 'base64')
     
     // This is a simplified one-way encryption for storage
     // For true E2E, both parties would need each other's public keys
     const messageBytes = stringToUint8Array(message)
     const encryptedBytes = nacl.secretbox(messageBytes, nonce, 
-      Buffer.from(recipientPublicKey.slice(0, 32), 'base64') as any
+      new Uint8Array(Buffer.from(recipientPublicKey.slice(0, 32), 'base64'))
     )
 
     return {
@@ -176,7 +175,7 @@ export function verifySignature(message: string, signature: string, publicKey: s
   }
 }
 
-export default {
+const encryptionUtils = {
   generateKeyPair,
   encryptMessage,
   encryptMessageWithSharedSecret,
@@ -186,3 +185,5 @@ export default {
   signMessage,
   verifySignature,
 }
+
+export default encryptionUtils
