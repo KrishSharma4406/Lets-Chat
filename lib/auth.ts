@@ -17,17 +17,14 @@ console.log('Prisma:', typeof prisma !== 'undefined' ? 'available' : 'missing');
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
-    // OAuth providers disabled for debugging CLIENT_FETCH_ERROR
-    // Uncomment after fixing env vars and testing Credentials works
-
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+      clientId: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
       allowDangerousEmailAccountLinking: true,
     }),
     GitHubProvider({
-      clientId: process.env.GITHUB_ID as string,
-      clientSecret: process.env.GITHUB_SECRET as string,
+      clientId: process.env.GITHUB_ID || '',
+      clientSecret: process.env.GITHUB_SECRET || '',
       allowDangerousEmailAccountLinking: true,
     }),
     CredentialsProvider({
@@ -91,6 +88,7 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/auth',
     error: '/auth',
+    callbackUrl: '/chat'
   },
   debug: process.env.NODE_ENV === 'development',
   session: {
@@ -118,11 +116,21 @@ export const authOptions: NextAuthOptions = {
       return session
     },
     async redirect({ url, baseUrl }) {
-      // Allows relative callback URLs
-      if (url.startsWith("/")) return `${baseUrl}${url}`
-      // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) return url
-      return baseUrl + '/chat'
+      // Allow relative URLs (e.g., /chat)
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`
+      }
+      // Allow absolute URLs on the same origin
+      try {
+        const urlObj = new URL(url)
+        if (urlObj.origin === baseUrl) {
+          return url
+        }
+      } catch (err) {
+        // Invalid URL, redirect to /chat
+      }
+      // Default fallback for OAuth redirects
+      return `${baseUrl}/chat`
     }
   }
 }

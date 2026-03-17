@@ -54,8 +54,10 @@ export default function AuthForm() {
         if (result?.error) {
           setError(result.error || 'Failed to sign in after registration')
           setIsLoading(false)
+        } else if (result?.ok) {
+          // Redirect immediately after successful sign-in
+          router.push('/chat')
         }
-        // Session will be established and useEffect will handle redirect
       } else {
         // Login user
         const result = await signIn('credentials', {
@@ -68,8 +70,10 @@ export default function AuthForm() {
           console.error('Sign in error:', result.error)
           setError(result.error || 'Invalid email or password')
           setIsLoading(false)
+        } else if (result?.ok) {
+          // Redirect immediately after successful sign-in
+          router.push('/chat')
         }
-        // Session will be established and useEffect will handle redirect
       }
     } catch (err: unknown) {
       console.error('Auth error:', err)
@@ -82,11 +86,13 @@ export default function AuthForm() {
     setIsLoading(true)
     setError('')
     try {
-      // Use signIn with redirect: true for social providers to ensure proper session
+      // For social providers, signIn with redirect: true will redirect to OAuth provider
+      // and then back to the callbackUrl after successful authentication
       await signIn(provider, { 
         callbackUrl: '/chat',
         redirect: true 
       })
+      // Note: Code after this won't execute as the browser will redirect
     } catch (err) {
       console.error(`${provider} login error:`, err)
       setError(`Failed to initialize ${provider} login`)

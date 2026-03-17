@@ -3,12 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
   name          String?
   email         String    @unique
   emailVerified DateTime?
@@ -18,7 +18,7 @@ model User {
   isOnline      Boolean   @default(false)
   isVerified    Boolean   @default(false)
   twoFactorEnabled Boolean @default(false)
-  twoFactorSecret String? @db.Text
+  twoFactorSecret String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   
@@ -37,33 +37,34 @@ model User {
 }
 
 model Account {
-  id                String  @id @default(cuid())
-  userId            String
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
 
   @@unique([provider, providerAccountId])
 }
 
 model Session {
-  id           String   @id @default(cuid())
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
   sessionToken String   @unique
-  userId       String
+  userId       String   @db.ObjectId
   expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id])
 }
 
 model VerificationToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
   identifier String
   token      String   @unique
   expires    DateTime
@@ -72,7 +73,7 @@ model VerificationToken {
 }
 
 model Conversation {
-  id            String   @id @default(cuid())
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
   name          String?
   isGroup       Boolean  @default(false)
   createdAt     DateTime @default(now())
@@ -84,22 +85,22 @@ model Conversation {
 }
 
 model ConversationParticipant {
-  id             String       @id @default(cuid())
-  userId         String
-  conversationId String
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String       @db.ObjectId
+  conversationId String       @db.ObjectId
   joinedAt       DateTime     @default(now())
   
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
   
   @@unique([userId, conversationId])
 }
 
 model Message {
-  id             String       @id @default(cuid())
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
   content        String
-  encryptedContent String? @db.Text
-  encryptedKey   String? @db.Text
+  encryptedContent String?
+  encryptedKey   String?
   nonce          String?
   image          String?
   fileName       String?
@@ -109,11 +110,11 @@ model Message {
   deletedAt      DateTime?
   editedAt       DateTime?
   createdAt      DateTime     @default(now())
-  senderId       String
-  conversationId String
+  senderId       String       @db.ObjectId
+  conversationId String       @db.ObjectId
   
-  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation(fields: [senderId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
   seenBy         SeenMessage[]
   reactions      MessageReaction[]
   @@index([conversationId])
@@ -121,90 +122,90 @@ model Message {
 }
 
 model SeenMessage {
-  id        String   @id @default(cuid())
-  messageId String
-  userId    String
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  messageId String   @db.ObjectId
+  userId    String   @db.ObjectId
   seenAt    DateTime @default(now())
   
-  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   Message  @relation(fields: [messageId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
   
   @@unique([messageId, userId])
 }
 
 model UserKeyPair {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  publicKey String   @db.Text
-  privateKey String  @db.Text
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @unique @db.ObjectId
+  publicKey String
+  privateKey String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model BlockedUser {
-  id        String   @id @default(cuid())
-  blockerId String
-  blockedId String
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  blockerId String   @db.ObjectId
+  blockedId String   @db.ObjectId
   blockedAt DateTime @default(now())
   
-  blocker   User     @relation("blockingUser", fields: [blockerId], references: [id], onDelete: Cascade)
-  blocked   User     @relation("blockedByUser", fields: [blockedId], references: [id], onDelete: Cascade)
+  blocker   User     @relation("blockingUser", fields: [blockerId], references: [id])
+  blocked   User     @relation("blockedByUser", fields: [blockedId], references: [id])
   
   @@unique([blockerId, blockedId])
   @@index([blockedId])
 }
 
 model VideoCall {
-  id          String   @id @default(cuid())
-  callerId    String
-  recipientId String
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  callerId    String   @db.ObjectId
+  recipientId String   @db.ObjectId
   status      String   @default("pending")
   startedAt   DateTime?
   endedAt     DateTime?
   duration    Int?
   createdAt   DateTime @default(now())
   
-  caller      User     @relation("caller", fields: [callerId], references: [id], onDelete: Cascade)
-  recipient   User     @relation("recipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  caller      User     @relation("caller", fields: [callerId], references: [id])
+  recipient   User     @relation("recipient", fields: [recipientId], references: [id])
   
   @@index([recipientId])
   @@index([callerId])
 }
 
 model MessageReaction {
-  id        String   @id @default(cuid())
-  messageId String
-  userId    String
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  messageId String   @db.ObjectId
+  userId    String   @db.ObjectId
   emoji     String
   createdAt DateTime @default(now())
   
-  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   Message  @relation(fields: [messageId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
   
   @@unique([messageId, userId, emoji])
   @@index([messageId])
 }
 
 model TypingIndicator {
-  id             String   @id @default(cuid())
-  userId         String
-  conversationId String
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String   @db.ObjectId
+  conversationId String   @db.ObjectId
   startedAt      DateTime @default(now())
   
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [userId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
   
   @@unique([userId, conversationId])
   @@index([conversationId])
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   action    String
   userId    String
-  details   String   @db.Text
+  details   String
   ipAddress String?
   userAgent String?
   createdAt DateTime @default(now())

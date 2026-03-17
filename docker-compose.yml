@@ -10,7 +10,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/letschat?schema=public
+      DATABASE_URL: mongodb://db:27017/letschat
       NEXTAUTH_URL: http://localhost:3000
     command: sh -c "npx prisma db push && npm run start"
     ports:
@@ -20,18 +20,14 @@ services:
       - lets-chat-network
 
   db:
-    image: postgres:16-alpine
+    image: mongo:7.0
     container_name: lets-chat-db
-    environment:
-      POSTGRES_DB: letschat
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "27017:27017"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mongo_data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d letschat"]
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping').ok"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -40,7 +36,7 @@ services:
       - lets-chat-network
 
 volumes:
-  postgres_data:
+  mongo_data:
 
 networks:
   lets-chat-network:
