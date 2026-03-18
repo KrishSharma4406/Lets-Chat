@@ -1,0 +1,162 @@
+'use client'
+/**
+ * useMessages — paginated message fetching with real-time Socket.IO updates.
+ */
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { useSocketStore } from '@/lib/stores/socketStore'
+
+export interface MessageSender {
+    id: string
+    name: string | null
+    email: string
+    image: string | null
+}
+
+export interface Reaction {
+    emoji: string
+    userId: string
+    user: { name: string | null; image: string | null }
+}
+
+export interface Message {
+    id: string
+    content: string
+    image?: string | null
+    fileName?: string | null
+    fileType?: string | null
+    messageType?: string
+    createdAt: string
+    isEdited?: boolean
+    isDeleted?: boolean
+    replyToId?: string | null
+    replyTo?: { id: string; content: string; sender: MessageSender } | null
+    sender: MessageSender
+    seenBy?: Array<{ userId: string; seenAt: string }>
+    reactions?: Reaction[]
+}
+
+const PAGE_SIZE = 30
+
+export function useMessages(conversationId: string | null) {
+    const [messages, setMessages] = useState<Message[]>([])
+    const [loading, setLoading] = useState(false)
+    const [hasMore, setHasMore] = useState(true)
+    const cursorRef = useRef<string | null>(null)
+    const { socket } = useSocketStore()
+
+    /* ── Fetch a page ───────────────────────────────────── */
+    const fetchPage = useCallback(async (cursor?: string) => {
+        if (!conversationId) return
+        setLoading(true)
+        try {
+            const url = `/api/conversations/${conversationId}/messages?limit=${PAGE_SIZE}${cursor ? `&cursor=${cursor}` : ''}`
+            const res = await fetch(url)
+            if (!res.ok) throw new Error('fetch failed')
+            const data: Message[] = await res.json()
+
+            if (data.length < PAGE_SIZE) setHasMore(false)
+            if (data.length > 0) cursorRef.current = data[data.length - 1].id
+
+            // Prepend older messages
+            setMessages((prev) => cursor ? [...data.reverse(), ...prev] : data.reverse())
+        } catch (e) {
+            console.error('useMessages fetchPage error:', e)
+        } finally {
+            setLoading(false)
+        }
+    }, [conversationId])
+
+    /* ── Initial load ───────────────────────────────────── */
+    useEffect(() => {
+        if (!conversationId) { setMessages([]); return }
+        cursorRef.current = null
+        setHasMore(true)
+        setMessages([])
+        fetchPage()
+        // Mark read
+        fetch(`/api/conversations/${conversationId}/read`, { method: 'POST' }).catch(() => { })
+    }, [conversationId, fetchPage])
+
+    /* ── Socket real-time events ────────────────────────── */
+    useEffect(() => {
+        if (!socket || !conversationId) return
+
+        socket.emit('join:conversation', conversationId)
+
+        const onNew = (msg: Message) => {
+            setMessages((prev) => [...prev, msg])
+            // Mark read immediately
+            fetch(`/api/conversations/${conversationId}/read`, { method: 'POST' }).catch(() => { })
+        }
+
+        const onDeleted = ({ messageId }: { messageId: string }) => {
+            setMessages((prev) =>
+                prev.map((m) => m.id === messageId ? { ...m, isDeleted: true, content: 'This message was deleted' } : m)
+            )
+        }
+
+        const onEdited = ({ messageId, content }: { messageId: string; content: string }) => {
+            setMessages((prev) =>
+                prev.map((m) => m.id === messageId ? { ...m, content, isEdited: true } : m)
+            )
+        }
+
+        const onRead = ({ messageId, userId }: { messageId: string; userId: string }) => {
+            setMessages((prev) =>
+                prev.map((m) =>
+                    m.id === messageId
+                        ? { ...m, seenBy: [...(m.seenBy || []), { userId, seenAt: new Date().toISOString() }] }
+                        : m
+                )
+            )
+        }
+
+        const onReaction = ({ messageId, emoji, userId }: { messageId: string; emoji: string; userId: string; conversationId: string }) => {
+            setMessages((prev) =>
+                prev.map((m) => {
+                    if (m.id !== messageId) return m
+                    const existing = (m.reactions || []).find((r) => r.emoji === emoji && r.userId === userId)
+                    const reactions = existing
+                        ? (m.reactions || []).filter((r) => !(r.emoji === emoji && r.userId === userId))
+                        : [...(m.reactions || []), { emoji, userId, user: { name: null, image: null } }]
+                    return { ...m, reactions }
+                })
+            )
+        }
+
+        socket.on('message:new', onNew)
+        socket.on('message:deleted', onDeleted)
+        socket.on('message:edited', onEdited)
+        socket.on('message:read', onRead)
+        socket.on('reaction:update', onReaction)
+
+        return () => {
+            socket.emit('leave:conversation', conversationId)
+            socket.off('message:new', onNew)
+            socket.off('message:deleted', onDeleted)
+            socket.off('message:edited', onEdited)
+            socket.off('message:read', onRead)
+            socket.off('reaction:update', onReaction)
+        }
+    }, [socket, conversationId])
+
+    const loadMore = useCallback(() => {
+        if (!loading && hasMore && cursorRef.current) {
+            fetchPage(cursorRef.current)
+        }
+    }, [loading, hasMore, fetchPage])
+
+    const addOptimistic = useCallback((msg: Message) => {
+        setMessages((prev) => [...prev, msg])
+    }, [])
+
+    const removeOptimistic = useCallback((tempId: string) => {
+        setMessages((prev) => prev.filter((m) => m.id !== tempId))
+    }, [])
+
+    const replaceOptimistic = useCallback((tempId: string, msg: Message) => {
+        setMessages((prev) => prev.map((m) => m.id === tempId ? msg : m))
+    }, [])
+
+    return { messages, loading, hasMore, loadMore, addOptimistic, removeOptimistic, replaceOptimistic }
+}

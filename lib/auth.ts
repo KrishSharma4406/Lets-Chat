@@ -87,8 +87,7 @@ export const authOptions: NextAuthOptions = {
   ],
   pages: {
     signIn: '/auth',
-    error: '/auth',
-    callbackUrl: '/chat'
+    error: '/auth'
   },
   debug: process.env.NODE_ENV === 'development',
   session: {

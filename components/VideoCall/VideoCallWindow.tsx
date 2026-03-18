@@ -1,225 +1,231 @@
 'use client'
-
-import React, { useEffect, useRef, useState } from 'react'
+/**
+ * VideoCallWindow — full-screen WebRTC voice/video call UI
+ * Uses simple-peer for WebRTC, Socket.IO for signaling
+ */
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { Mic, MicOff, Video, VideoOff, PhoneOff, RotateCcw, Volume2 } from 'lucide-react'
 import SimplePeer from 'simple-peer'
-import { useVideoCall } from '@/hooks/useChat'
+import { useCallStore } from '@/lib/stores/callStore'
+import { useSocketStore } from '@/lib/stores/socketStore'
+import { useSession } from 'next-auth/react'
+import toast from 'react-hot-toast'
 
-interface VideoCallWindowProps {
-  callId: string
-  recipientId: string
-  recipientName: string
-  isInitiator: boolean
-  onCallEnd?: () => void
-}
-
-export function VideoCallWindow({
-  callId,
-  recipientId,
-  recipientName,
-  isInitiator,
-  onCallEnd
-}: VideoCallWindowProps) {
-  const [stream, setStream] = useState<MediaStream | null>(null)
-  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
-  const [isCallActive, setIsCallActive] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [isMuted, setIsMuted] = useState(false)
-  const [isVideoOn, setIsVideoOn] = useState(true)
-  const [callDuration, setCallDuration] = useState(0)
+export default function VideoCallWindow() {
+  const { data: session } = useSession()
+  const { socket } = useSocketStore()
+  const { status, callId, remoteUserId, remoteUserName, remoteUserImage, isVideo, isAudioMuted, isVideoOff, toggleMute, toggleVideo, resetCall, setCall } = useCallStore()
 
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
   const peerRef = useRef<SimplePeer.Instance | null>(null)
+  const localStreamRef = useRef<MediaStream | null>(null)
+  const [duration, setDuration] = useState(0)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const { endCall } = useVideoCall()
+  const isActive = status === 'active'
+  const isCalling = status === 'calling'
 
-  const handleCallEnd = React.useCallback(async () => {
+  /** Get local media */
+  const startLocalStream = useCallback(async () => {
     try {
-      await endCall(callId, callDuration)
-      setIsCallActive(false)
-      peerRef.current?.destroy()
-      stream?.getTracks().forEach(track => track.stop())
-      remoteStream?.getTracks().forEach(track => track.stop())
-      onCallEnd?.()
-    } catch (err) {
-      console.error('Failed to end call:', err)
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: isVideo, audio: true,
+      })
+      localStreamRef.current = stream
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream
+      return stream
+    } catch {
+      toast.error('Could not access camera/microphone')
+      resetCall()
+      return null
     }
-  }, [endCall, callId, callDuration, stream, remoteStream, onCallEnd])
+  }, [isVideo, resetCall])
 
-  // Initialize media stream
-  useEffect(() => {
-    async function initializeMedia() {
-      try {
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 1280, height: 720 },
-          audio: true
-        })
-        setStream(mediaStream)
+  /** Create WebRTC peer (initiator = caller) */
+  const createPeer = useCallback((stream: MediaStream, initiator: boolean) => {
+    const peer = new SimplePeer({
+      initiator,
+      stream,
+      trickle: true,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+        ],
+      },
+    })
 
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = mediaStream
-        }
-
-        // Start WebRTC peer connection
-        const peer = new SimplePeer({
-          initiator: isInitiator,
-          trickle: true,
-          stream: mediaStream,
-          config: {
-            iceServers: [
-              { urls: 'stun:stun.l.google.com:19302' },
-              { urls: 'stun:stun1.l.google.com:19302' }
-            ]
-          }
-        })
-
-        peer.on('signal', (data) => {
-          // Send signal to other peer via WebSocket
-          const event = isInitiator ? 'webrtc_offer' : 'webrtc_answer'
-          // Emit through socket
-          console.log('WebRTC signal:', event, data)
-        })
-
-        peer.on('stream', (stream) => {
-          setRemoteStream(stream)
-          if (remoteVideoRef.current) {
-            remoteVideoRef.current.srcObject = stream
-          }
-        })
-
-        peer.on('error', (err) => {
-          setError(err.message)
-          console.error('WebRTC Error:', err)
-        })
-
-        peer.on('close', () => {
-          handleCallEnd()
-        })
-
-        peerRef.current = peer
-        setIsCallActive(true)
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to access camera/microphone'
-        setError(message)
-        console.error('Media error:', err)
+    peer.on('signal', (data) => {
+      if (!socket || !remoteUserId) return
+      if (initiator) {
+        socket.emit('webrtc:offer', { to: remoteUserId, offer: data, callId })
+      } else {
+        socket.emit('webrtc:answer', { to: remoteUserId, answer: data, callId })
       }
+    })
+
+    peer.on('stream', (remoteStream) => {
+      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream
+      setCall({ status: 'active', startedAt: new Date() })
+      timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000)
+    })
+
+    peer.on('error', (err) => {
+      console.error('Peer error:', err)
+      toast.error('Call connection failed')
+      handleEndCall()
+    })
+
+    peerRef.current = peer
+  }, [socket, remoteUserId, callId]) // eslint-disable-line
+
+  /** Handle call initiation (outgoing) */
+  useEffect(() => {
+    if (status !== 'calling') return
+    let mounted = true
+    startLocalStream().then((stream) => {
+      if (!stream || !mounted) return
+      createPeer(stream, true) // initiator
+    })
+    return () => { mounted = false }
+  }, [status]) // eslint-disable-line
+
+  /** WebRTC signaling handlers */
+  useEffect(() => {
+    if (!socket) return
+
+    const onOffer = async ({ offer }: { offer: SimplePeer.SignalData }) => {
+      if (status !== 'active' && status !== 'incoming') return
+      const stream = localStreamRef.current || await startLocalStream()
+      if (!stream) return
+      if (!peerRef.current) createPeer(stream, false)
+      peerRef.current?.signal(offer)
     }
 
-    initializeMedia()
+    const onAnswer = ({ answer }: { answer: SimplePeer.SignalData }) => {
+      peerRef.current?.signal(answer)
+    }
+
+    const onIce = ({ candidate }: { candidate: RTCIceCandidateInit }) => {
+      peerRef.current?.signal({ type: 'candidate', candidate } as unknown as SimplePeer.SignalData)
+    }
+
+    const onEnded = () => { toast('Call ended'); cleanUp() }
+
+    socket.on('webrtc:offer', onOffer)
+    socket.on('webrtc:answer', onAnswer)
+    socket.on('webrtc:ice', onIce)
+    socket.on('call:ended', onEnded)
 
     return () => {
-      stream?.getTracks().forEach(track => track.stop())
+      socket.off('webrtc:offer', onOffer)
+      socket.off('webrtc:answer', onAnswer)
+      socket.off('webrtc:ice', onIce)
+      socket.off('call:ended', onEnded)
     }
-  }, [isInitiator, handleCallEnd, stream])
+  }, [socket, status]) // eslint-disable-line
 
-  // Call duration tracking
-  useEffect(() => {
-    if (!isCallActive) return
+  const cleanUp = useCallback(() => {
+    peerRef.current?.destroy()
+    peerRef.current = null
+    localStreamRef.current?.getTracks().forEach((t) => t.stop())
+    localStreamRef.current = null
+    if (timerRef.current) clearInterval(timerRef.current)
+    resetCall()
+  }, [resetCall])
 
-    const interval = setInterval(() => {
-      setCallDuration(prev => prev + 1)
-    }, 1000)
+  const handleEndCall = useCallback(() => {
+    socket?.emit('call:end', { callId, userId: session?.user?.id })
+    cleanUp()
+  }, [socket, callId, session, cleanUp])
 
-    return () => clearInterval(interval)
-  }, [isCallActive])
+  const handleMuteToggle = useCallback(() => {
+    toggleMute()
+    localStreamRef.current?.getAudioTracks().forEach((t) => { t.enabled = !t.enabled })
+  }, [toggleMute])
 
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
-  }
+  const handleVideoToggle = useCallback(() => {
+    toggleVideo()
+    localStreamRef.current?.getVideoTracks().forEach((t) => { t.enabled = !t.enabled })
+  }, [toggleVideo])
 
-  const toggleMute = () => {
-    if (stream) {
-      stream.getAudioTracks().forEach(track => {
-        track.enabled = !track.enabled
-      })
-      setIsMuted(!isMuted)
-    }
-  }
+  const formatDuration = (s: number) =>
+    `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 
-  const toggleVideo = () => {
-    if (stream) {
-      stream.getVideoTracks().forEach(track => {
-        track.enabled = !track.enabled
-      })
-      setIsVideoOn(!isVideoOn)
-    }
-  }
+  if (status === 'idle' || status === 'ended') return null
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full bg-red-50 rounded-lg p-4">
-        <span className="text-red-600 font-semibold mb-2">Call Error</span>
-        <p className="text-red-500 text-center">{error}</p>
-      </div>
-    )
-  }
+  const avatarLetter = (remoteUserName || 'U')[0].toUpperCase()
 
   return (
-    <div className="flex flex-col h-full bg-black rounded-lg overflow-hidden">
-      {/* Remote video (main) */}
-      <div className="relative flex-1 bg-black">
-        <video
-          ref={remoteVideoRef}
-          autoPlay
-          playsInline
-          className="w-full h-full object-cover"
-        />
-        
-        {/* Local video (small PIP) */}
-        <div className="absolute bottom-4 right-4 w-24 h-24 bg-gray-800 rounded-lg overflow-hidden border-2 border-white">
-          <video
-            ref={localVideoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full h-full object-cover"
-          />
-        </div>
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#0B0B0B' }}>
+      {/* Remote video / avatar */}
+      <div className="flex-1 relative flex items-center justify-center">
+        <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" style={{ display: isActive ? 'block' : 'none' }} />
 
-        {/* Call info overlay */}
-        <div className="absolute top-4 left-4 bg-black bg-opacity-70 text-white px-3 py-2 rounded-lg">
-          <p className="font-semibold">{recipientName}</p>
-          <p className="text-sm text-gray-300">{formatDuration(callDuration)}</p>
-        </div>
+        {/* Avatar placeholder when call not yet connected */}
+        {!isActive && (
+          <div className="flex flex-col items-center space-y-4 text-white text-center">
+            <div className="w-28 h-28 rounded-full flex items-center justify-center text-4xl font-bold animate-pulse-ring"
+              style={{ background: 'var(--brand-primary)' }}>
+              {avatarLetter}
+            </div>
+            <p className="text-2xl font-semibold">{remoteUserName || 'Unknown'}</p>
+            <p className="text-white/60">{isCalling ? 'Calling…' : 'Connecting…'}</p>
+          </div>
+        )}
+
+        {/* Duration badge */}
+        {isActive && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white text-sm font-mono px-4 py-1 rounded-full"
+            style={{ background: 'rgba(0,0,0,0.5)' }}>
+            {formatDuration(duration)}
+          </div>
+        )}
+
+        {/* Local PIP */}
+        {isVideo && (
+          <div className="absolute bottom-4 right-4 w-28 h-40 rounded-2xl overflow-hidden border-2 shadow-lg"
+            style={{ borderColor: 'var(--brand-accent)' }}>
+            <video ref={localVideoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+          </div>
+        )}
       </div>
 
-      {/* Controls */}
-      <div className="bg-gray-900 p-4 flex justify-center gap-4">
-        <button
-          onClick={toggleMute}
-          className={`p-3 rounded-full transition-colors ${
-            isMuted
-              ? 'bg-red-500 hover:bg-red-600'
-              : 'bg-gray-700 hover:bg-gray-600'
-          }`}
-          title={isMuted ? 'Unmute' : 'Mute'}
-        >
-          <span className="text-white text-lg">🎤</span>
-        </button>
-
-        <button
-          onClick={toggleVideo}
-          className={`p-3 rounded-full transition-colors ${
-            !isVideoOn
-              ? 'bg-red-500 hover:bg-red-600'
-              : 'bg-gray-700 hover:bg-gray-600'
-          }`}
-          title={isVideoOn ? 'Turn off video' : 'Turn on video'}
-        >
-          <span className="text-white text-lg">📹</span>
-        </button>
-
-        <button
-          onClick={handleCallEnd}
-          className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-full font-semibold transition-colors"
-        >
-          End Call
+      {/* Controls bar */}
+      <div className="flex items-center justify-center space-x-6 pb-10 pt-6" style={{ background: 'rgba(0,0,0,0.7)' }}>
+        <CallBtn icon={isAudioMuted ? <MicOff size={22} /> : <Mic size={22} />}
+          label={isAudioMuted ? 'Unmute' : 'Mute'}
+          onClick={handleMuteToggle}
+          active={isAudioMuted}
+        />
+        {isVideo && (
+          <CallBtn icon={isVideoOff ? <VideoOff size={22} /> : <Video size={22} />}
+            label={isVideoOff ? 'Show cam' : 'Hide cam'}
+            onClick={handleVideoToggle}
+            active={isVideoOff}
+          />
+        )}
+        <CallBtn icon={<Volume2 size={22} />} label="Speaker" onClick={() => { }} />
+        {/* End call */}
+        <button onClick={handleEndCall}
+          className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95"
+          style={{ background: '#EF4444' }}>
+          <PhoneOff size={26} className="text-white" />
         </button>
       </div>
     </div>
   )
 }
 
-export default VideoCallWindow
+function CallBtn({ icon, label, onClick, active }: { icon: React.ReactNode; label: string; onClick: () => void; active?: boolean }) {
+  return (
+    <button onClick={onClick} className="flex flex-col items-center space-y-1">
+      <div className="w-12 h-12 rounded-full flex items-center justify-center text-white transition-all"
+        style={{ background: active ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)' }}>
+        {icon}
+      </div>
+      <span className="text-xs text-white/70">{label}</span>
+    </button>
+  )
+}

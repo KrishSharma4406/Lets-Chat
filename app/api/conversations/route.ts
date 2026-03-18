@@ -27,7 +27,9 @@ export async function GET() {
                 id: true,
                 name: true,
                 email: true,
-                image: true
+                image: true,
+                isOnline: true,
+                lastSeen: true,
               }
             }
           }
