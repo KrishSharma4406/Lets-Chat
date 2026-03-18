@@ -18,7 +18,7 @@ export default function SettingsPage() {
     const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'privacy' | 'about'>('profile')
 
     useEffect(() => {
-        if (status === 'unauthenticated') router.push('/auth')
+        if (status === 'unauthenticated') router.push('/chat')
         if (session?.user?.name) setName(session.user.name)
         setIsDark(document.documentElement.classList.contains('dark'))
     }, [status, session, router])
@@ -60,7 +60,7 @@ export default function SettingsPage() {
     return (
         <div className="h-screen flex overflow-hidden" style={{ background: 'var(--bg-base)' }}>
             {/* Settings sidebar */}
-            <div className="w-full md:w-96 flex-shrink-0 flex flex-col h-full border-r"
+            <div className="w-full md:w-96 shrink-0 flex flex-col h-full border-r"
                 style={{ background: 'var(--bg-sidebar)', borderColor: 'var(--border)' }}>
                 {/* Header */}
                 <div className="flex items-center space-x-3 px-4 py-4"
@@ -123,7 +123,7 @@ export default function SettingsPage() {
                             </span>
                         </div>
                         <button onClick={toggleTheme}
-                            className="w-12 h-6 rounded-full relative transition-all flex-shrink-0"
+                            className="w-12 h-6 rounded-full relative transition-all shrink-0"
                             style={{ background: isDark ? 'var(--brand-accent)' : 'var(--border)' }}>
                             <div className="w-4 h-4 rounded-full bg-white absolute top-1 transition-all"
                                 style={{ left: isDark ? '26px' : '4px' }} />
@@ -133,7 +133,7 @@ export default function SettingsPage() {
                     <hr style={{ borderColor: 'var(--border)', margin: '8px 0' }} />
 
                     {/* Logout */}
-                    <button onClick={() => signOut({ callbackUrl: '/auth' })}
+                    <button onClick={() => signOut({ callbackUrl: '/chat' })}
                         className="flex items-center space-x-4 w-full px-6 py-4 text-left transition-colors hover:opacity-80">
                         <LogOut size={18} style={{ color: '#EF4444' }} />
                         <span className="text-sm font-medium" style={{ color: '#EF4444' }}>Log out</span>
@@ -222,7 +222,7 @@ export default function SettingsPage() {
                                         <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{item.label}</p>
                                         <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{item.desc}</p>
                                     </div>
-                                    <button className="w-10 h-5.5 rounded-full flex-shrink-0"
+                                    <button className="w-10 h-5.5 rounded-full shrink-0"
                                         style={{ background: 'var(--brand-accent)', width: 40, height: 22, position: 'relative' }}>
                                         <div className="w-4 h-4 rounded-full bg-white absolute top-1 right-1" />
                                     </button>

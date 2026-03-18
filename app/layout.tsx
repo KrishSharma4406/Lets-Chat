@@ -1,13 +1,15 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import AuthProvider from "@/components/AuthProvider";
 import { Toaster } from "react-hot-toast";
-import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Let's Chat — Real-time Messaging",
   description: "A modern, WhatsApp-inspired real-time chat application with E2EE, voice & video calls.",
   manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#075E54" },
     { media: "(prefers-color-scheme: dark)", color: "#111B21" },

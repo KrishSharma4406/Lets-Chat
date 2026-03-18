@@ -3,19 +3,16 @@ import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
 import GitHubProvider from "next-auth/providers/github"
-import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import bcrypt from "bcryptjs"
-import { prisma } from "@/lib/prisma"
+import { allUsers } from "./userStore"
 
 console.log('NextAuth config loading...');
 console.log('NEXTAUTH_SECRET:', process.env.NEXTAUTH_SECRET ? 'present' : 'MISSING');
 console.log('NEXTAUTH_URL:', process.env.NEXTAUTH_URL || 'not set');
 console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'present' : 'MISSING');
 console.log('GITHUB_ID:', process.env.GITHUB_ID ? 'present' : 'MISSING');
-console.log('Prisma:', typeof prisma !== 'undefined' ? 'available' : 'missing');
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || '',
@@ -28,47 +25,38 @@ export const authOptions: NextAuthOptions = {
       allowDangerousEmailAccountLinking: true,
     }),
     CredentialsProvider({
-      name: "credentials",
+      name: "Demo Login",
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        email: { label: "Email", type: "email", placeholder: "demo@example.com" },
+        password: { label: "Password", type: "password", placeholder: "password" }
       },
       async authorize(credentials) {
-        console.log('[Credentials] Authorize called');
+        console.log('[Credentials Auth] Login attempt:', credentials?.email);
         try {
           if (!credentials?.email || !credentials?.password) {
             throw new Error("Email and password are required")
           }
 
-          console.log('[Credentials] Looking up user:', credentials.email);
-          const user = await prisma.user.findUnique({
-            where: {
-              email: credentials.email
-            }
-          })
-
+          // Find user in all users (includes both demo and registered)
+          const user = allUsers.find(u => u.email === credentials.email)
+          
           if (!user) {
-            console.log('[Credentials] No user found');
-            throw new Error("No user found with this email")
+            console.log('[Credentials Auth] User not found:', credentials.email);
+            throw new Error("Invalid email or password")
           }
 
-          if (!user.password) {
-            console.log('[Credentials] No password hash - social account');
-            throw new Error("This account uses social login. Please sign in with your social provider")
-          }
-
-          console.log('[Credentials] Comparing password...');
+          // Check password
           const isCorrectPassword = await bcrypt.compare(
             credentials.password,
-            user.password
+            user.passwordHash
           )
 
           if (!isCorrectPassword) {
-            console.log('[Credentials] Invalid password');
-            throw new Error("Invalid password")
+            console.log('[Credentials Auth] Invalid password');
+            throw new Error("Invalid email or password")
           }
 
-          console.log('[Credentials] Success, returning user');
+          console.log('[Credentials Auth] Login successful:', user.email);
           return {
             id: user.id,
             email: user.email,
@@ -76,18 +64,15 @@ export const authOptions: NextAuthOptions = {
             image: user.image
           }
         } catch (error) {
-          console.error('Auth error:', error)
-          if (error instanceof Error) {
-            throw new Error(error.message)
-          }
-          throw new Error("Authentication failed")
+          console.error('[Credentials Auth] Error:', error)
+          throw error
         }
       }
     })
   ],
   pages: {
-    signIn: '/auth',
-    error: '/auth'
+    signIn: '/chat',
+    error: '/chat'
   },
   debug: process.env.NODE_ENV === 'development',
   session: {
@@ -97,13 +82,12 @@ export const authOptions: NextAuthOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET as string,
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user}) {
       if (user) {
         token.id = user.id
         token.email = user.email
-      }
-      if (account) {
-        token.provider = account.provider
+        token.name = user.name
+        token.picture = user.image
       }
       return token
     },

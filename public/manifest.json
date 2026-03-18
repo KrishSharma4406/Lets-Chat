@@ -1,0 +1,22 @@
+{
+  "name": "Let's Chat — Real-time Messaging",
+  "short_name": "Let's Chat",
+  "description": "A modern, WhatsApp-inspired real-time chat application with E2EE, voice & video calls.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#111B21",
+  "theme_color": "#075E54",
+  "icons": [],
+  "screenshots": [],
+  "categories": ["productivity", "social"],
+  "shortcuts": [
+    {
+      "name": "Open Chat",
+      "short_name": "Chat",
+      "description": "Open the chat interface",
+      "url": "/chat"
+    }
+  ]
+}

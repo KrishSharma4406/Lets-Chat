@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSession, signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import ConversationList from '@/components/chat/ConversationList'
@@ -14,6 +14,115 @@ import { useSocketStore } from '@/lib/stores/socketStore'
 import { MessageCircle } from 'lucide-react'
 
 const VideoCallWindow = dynamic(() => import('@/components/VideoCall/VideoCallWindow'), { ssr: false })
+
+function DemoLoginForm() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('password')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [showDemoForm, setShowDemoForm] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    
+    try {
+      const result = await signIn('credentials', {
+        email: email || 'demo@example.com',
+        password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        setError(result.error)
+      } else if (result?.ok) {
+        // Session will be updated automatically
+      }
+    } catch (err) {
+      setError('Login failed. Please try again.')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="w-full space-y-4">
+      {/* OAuth Buttons */}
+      <div className="space-y-3">
+        <button
+          onClick={() => signIn('google')}
+          className="w-full py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2 transition hover:opacity-90"
+          style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+        >
+          <span>🔵</span> Sign in with Google
+        </button>
+        <button
+          onClick={() => signIn('github')}
+          className="w-full py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2 transition hover:opacity-90"
+          style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+        >
+          <span>⚫</span> Sign in with GitHub
+        </button>
+      </div>
+
+      {/* Divider */}
+      <div className="relative flex items-center">
+        <div className="grow" style={{ borderTop: '1px solid var(--border)' }} />
+        <span className="px-3 text-sm" style={{ color: 'var(--text-muted)', background: 'var(--bg-base)' }}>or</span>
+        <div className="grow" style={{ borderTop: '1px solid var(--border)' }} />
+      </div>
+
+      {/* Demo Login Toggle */}
+      <button
+        type="button"
+        onClick={() => setShowDemoForm(!showDemoForm)}
+        className="w-full py-3 px-4 rounded-lg font-medium text-sm transition hover:opacity-90"
+        style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+      >
+        {showDemoForm ? 'Hide Demo Login' : 'Demo Login (for testing)'}
+      </button>
+
+      {/* Demo Form */}
+      {showDemoForm && (
+        <form onSubmit={handleSubmit} className="space-y-3 p-4 rounded-lg" style={{ background: 'var(--bg-surface)' }}>
+          <div className="space-y-2">
+            <label className="block text-xs font-medium" style={{ color: 'var(--text-primary)' }}>Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="demo@example.com"
+              className="w-full px-3 py-2 rounded border text-sm"
+              style={{ background: 'var(--bg-base)', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="block text-xs font-medium" style={{ color: 'var(--text-primary)' }}>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="password"
+              className="w-full px-3 py-2 rounded border text-sm"
+              style={{ background: 'var(--bg-base)', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
+            />
+          </div>
+          {error && <p className="text-red-500 text-xs">{error}</p>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2 px-4 rounded font-medium text-white transition disabled:opacity-50 text-sm"
+            style={{ background: 'var(--brand-primary)' }}
+          >
+            {loading ? 'Signing in...' : 'Sign In'}
+          </button>
+        </form>
+      )}
+    </div>
+  )
+}
 
 export default function ChatPage() {
   const { data: session, status } = useSession()
@@ -48,7 +157,7 @@ export default function ChatPage() {
   }, [socket, setCall])
 
   useEffect(() => {
-    if (status === 'unauthenticated') router.push('/auth')
+    if (status === 'unauthenticated') router.push('/chat')
   }, [status, router])
 
   if (status === 'loading') {
@@ -67,7 +176,23 @@ export default function ChatPage() {
     )
   }
 
-  if (!session) return null
+  if (!session) {
+    return (
+      <div className="h-screen flex items-center justify-center" style={{ background: 'var(--bg-base)' }}>
+        <div className="flex flex-col items-center space-y-6 max-w-sm w-full px-4">
+          <div className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg"
+            style={{ background: 'var(--brand-primary)' }}>
+            <MessageCircle size={40} className="text-white" />
+          </div>
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>Let&apos;s Chat</h1>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Demo Login</p>
+          </div>
+          <DemoLoginForm />
+        </div>
+      </div>
+    )
+  }
 
   const handleSelectConversation = (id: string) => {
     setSelectedConversation(id)
@@ -78,7 +203,7 @@ export default function ChatPage() {
     <div className="h-screen flex overflow-hidden relative" style={{ background: 'var(--bg-base)' }}>
       {/* Sidebar — hidden on mobile when chat is selected */}
       <div
-        className={`w-full md:w-[380px] lg:w-[420px] flex-shrink-0 flex flex-col h-full border-r transition-all duration-300 ${!mobileSidebarOpen && selectedConversation ? 'hidden md:flex' : 'flex'
+        className={`w-full md:w-95 lg:w-105 shrink-0 flex flex-col h-full border-r transition-all duration-300 ${!mobileSidebarOpen && selectedConversation ? 'hidden md:flex' : 'flex'
           }`}
         style={{ borderColor: 'var(--border)' }}
       >

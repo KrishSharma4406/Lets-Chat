@@ -44,7 +44,7 @@ export default function StatusPage() {
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    if (authStatus === 'unauthenticated') router.push('/auth')
+    if (authStatus === 'unauthenticated') router.push('/chat')
   }, [authStatus, router])
 
   const fetchStatuses = useCallback(async () => {
@@ -109,7 +109,7 @@ export default function StatusPage() {
     }, 50)
 
     return () => { if (progressRef.current) clearInterval(progressRef.current) }
-  }, [viewing, viewIdx]) // eslint-disable-line
+  }, [viewing, viewIdx])
 
   const openViewer = (group: UserStatuses) => {
     setViewing(group)

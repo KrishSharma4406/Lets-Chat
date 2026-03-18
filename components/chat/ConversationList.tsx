@@ -158,7 +158,7 @@ export default function ConversationList({
                   { icon: <Users size={16} />, label: 'New group', action: () => { setShowGroupModal(true); setShowMenu(false) } },
                   { icon: <Archive size={16} />, label: 'Archived chats', action: () => setShowMenu(false) },
                   { icon: <Settings size={16} />, label: 'Settings', action: () => { window.location.href = '/settings'; setShowMenu(false) } },
-                  { icon: <LogOut size={16} />, label: 'Log out', action: () => signOut({ callbackUrl: '/auth' }), danger: true },
+                  { icon: <LogOut size={16} />, label: 'Log out', action: () => signOut({ callbackUrl: '/chat' }), danger: true },
                 ].map((item) => (
                   <button key={item.label} onClick={item.action}
                     className="flex items-center space-x-3 w-full px-4 py-2.5 text-sm transition-colors hover:opacity-80"
