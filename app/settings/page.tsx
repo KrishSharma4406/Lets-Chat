@@ -48,6 +48,58 @@ export default function SettingsPage() {
         }
     }
 
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please upload an image file')
+            return
+        }
+
+        const loadingToast = toast.loading('Uploading image...')
+        
+        try {
+            // Convert file to Base64
+            const base64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve((reader.result as string).split(',')[1]);
+                reader.onerror = error => reject(error);
+            });
+
+            // First upload the image
+            const uploadRes = await fetch('/api/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    base64: base64,
+                    mimeType: file.type,
+                    fileName: file.name
+                })
+            })
+            
+            if (!uploadRes.ok) throw new Error('Upload failed')
+            
+            const { url } = await uploadRes.json()
+
+            // Then update the profile
+            const profileRes = await fetch('/api/users/profile', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: url }),
+            })
+
+            if (!profileRes.ok) throw new Error('Profile update failed')
+
+            await update({ image: url })
+            toast.success('Profile picture updated!', { id: loadingToast })
+        } catch (error) {
+            console.error('Image upload error:', error)
+            toast.error('Failed to update picture', { id: loadingToast })
+        }
+    }
+
     const tabs = [
         { id: 'profile', icon: <User size={18} />, label: 'Profile' },
         { id: 'notifications', icon: <Bell size={18} />, label: 'Notifications' },
@@ -73,19 +125,26 @@ export default function SettingsPage() {
 
                 {/* Profile preview */}
                 <div className="flex items-center space-x-4 px-6 py-5 border-b" style={{ borderColor: 'var(--border)' }}>
-                    <div className="relative">
+                    <div className="relative group cursor-pointer">
+                        <input 
+                            type="file" 
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                            title="Change profile picture"
+                        />
                         {session?.user?.image ? (
-                            <Image src={session.user.image} alt="avatar" width={64} height={64} className="rounded-full object-cover" />
+                            <Image src={session.user.image} alt="avatar" width={64} height={64} className="rounded-full object-cover w-16 h-16 group-hover:opacity-80 transition-opacity" />
                         ) : (
-                            <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold text-white"
+                            <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold text-white group-hover:opacity-80 transition-opacity"
                                 style={{ background: 'var(--brand-secondary)' }}>
                                 {(session?.user?.name || 'U')[0].toUpperCase()}
                             </div>
                         )}
-                        <button className="absolute bottom-0 right-0 w-6 h-6 rounded-full flex items-center justify-center"
+                        <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full flex items-center justify-center z-0"
                             style={{ background: 'var(--brand-accent)' }}>
                             <Camera size={12} className="text-white" />
-                        </button>
+                        </div>
                     </div>
                     <div>
                         <p className="font-semibold text-base" style={{ color: 'var(--text-primary)' }}>{session?.user?.name || 'User'}</p>

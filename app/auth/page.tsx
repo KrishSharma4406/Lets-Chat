@@ -516,7 +516,8 @@ export default function AuthPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => signIn('google')}
+                onClick={() => signIn('google', { callbackUrl: '/chat' })}
+                type="button"
                 className="py-2.5 px-4 rounded-lg border font-medium transition-all duration-300 hover:scale-105 active:scale-95 group flex items-center justify-center gap-2"
                 style={{ 
                   background: 'var(--bg-surface)', 
@@ -533,7 +534,8 @@ export default function AuthPage() {
                 Google
               </button>
               <button
-                onClick={() => signIn('github')}
+                onClick={() => signIn('github', { callbackUrl: '/chat' })}
+                type="button"
                 className="py-2.5 px-4 rounded-lg border font-medium transition-all duration-300 hover:scale-105 active:scale-95 group flex items-center justify-center gap-2"
                 style={{ 
                   background: 'var(--bg-surface)', 
