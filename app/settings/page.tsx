@@ -192,7 +192,7 @@ export default function SettingsPage() {
                     <hr style={{ borderColor: 'var(--border)', margin: '8px 0' }} />
 
                     {/* Logout */}
-                    <button onClick={() => signOut({ callbackUrl: '/chat' })}
+                    <button onClick={() => signOut({ callbackUrl: '/auth' })}   
                         className="flex items-center space-x-4 w-full px-6 py-4 text-left transition-colors hover:opacity-80">
                         <LogOut size={18} style={{ color: '#EF4444' }} />
                         <span className="text-sm font-medium" style={{ color: '#EF4444' }}>Log out</span>

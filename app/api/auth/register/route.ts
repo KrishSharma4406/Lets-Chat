@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
-import { allUsers, addUser, findUserByEmail } from '@/lib/userStore'
+import { prisma } from '@/lib/prisma'
 
 export async function POST(req: Request) {
   try {
@@ -22,7 +22,11 @@ export async function POST(req: Request) {
     }
 
     // Check if user exists
-    if (findUserByEmail(email)) {
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    })
+
+    if (existingUser) {
       return NextResponse.json(
         { error: 'Email already registered' },
         { status: 400 }
@@ -33,16 +37,14 @@ export async function POST(req: Request) {
     const passwordHash = await bcrypt.hash(password, 10)
 
     // Create user
-    const newUser = {
-      id: Date.now().toString(),
-      name,
-      email,
-      passwordHash,
-      image: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-      createdAt: new Date(),
-    }
-
-    addUser(newUser)
+    const newUser = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: passwordHash,
+        image: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+      }
+    })
 
     console.log('[Register] New user created:', email)
 
@@ -66,3 +68,4 @@ export async function POST(req: Request) {
     )
   }
 }
+

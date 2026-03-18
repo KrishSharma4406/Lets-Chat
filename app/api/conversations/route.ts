@@ -11,6 +11,11 @@ export async function GET() {
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
+    // Fix: Prevent Malformed ObjectID crashes with old dummy user IDs
+    if (session.user.id.length !== 24) {
+      return NextResponse.json([])
+    }
+
     const conversations = await prisma.conversation.findMany({
       where: {
         participants: {

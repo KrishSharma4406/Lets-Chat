@@ -157,7 +157,7 @@ export default function ChatPage() {
   }, [socket, setCall])
 
   useEffect(() => {
-    if (status === 'unauthenticated') router.push('/chat')
+    if (status === 'unauthenticated') router.push('/auth')
   }, [status, router])
 
   if (status === 'loading') {
@@ -177,21 +177,7 @@ export default function ChatPage() {
   }
 
   if (!session) {
-    return (
-      <div className="h-screen flex items-center justify-center" style={{ background: 'var(--bg-base)' }}>
-        <div className="flex flex-col items-center space-y-6 max-w-sm w-full px-4">
-          <div className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg"
-            style={{ background: 'var(--brand-primary)' }}>
-            <MessageCircle size={40} className="text-white" />
-          </div>
-          <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>Let&apos;s Chat</h1>
-            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Demo Login</p>
-          </div>
-          <DemoLoginForm />
-        </div>
-      </div>
-    )
+    return null
   }
 
   const handleSelectConversation = (id: string) => {

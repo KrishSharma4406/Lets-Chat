@@ -4,7 +4,8 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
 import GitHubProvider from "next-auth/providers/github"
 import bcrypt from "bcryptjs"
-import { allUsers } from "./userStore"
+import { PrismaAdapter } from "@next-auth/prisma-adapter"
+import { prisma } from "@/lib/prisma"
 
 console.log('NextAuth config loading...');
 console.log('NEXTAUTH_SECRET:', process.env.NEXTAUTH_SECRET ? 'present' : 'MISSING');
@@ -13,6 +14,7 @@ console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'present' : 'MIS
 console.log('GITHUB_ID:', process.env.GITHUB_ID ? 'present' : 'MISSING');
 
 export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || '',
@@ -37,18 +39,22 @@ export const authOptions: NextAuthOptions = {
             throw new Error("Email and password are required")
           }
 
-          // Find user in all users (includes both demo and registered)
-          const user = allUsers.find(u => u.email === credentials.email)
+          // Find user in db
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email }
+          })
           
-          if (!user) {
-            console.log('[Credentials Auth] User not found:', credentials.email);
+          if (!user || !user.password) {
+            console.log('[Credentials Auth] User not found or uses OAuth:', credentials.email);
             throw new Error("Invalid email or password")
           }
+
+          const passwordToCompare = user.password;
 
           // Check password
           const isCorrectPassword = await bcrypt.compare(
             credentials.password,
-            user.passwordHash
+            passwordToCompare
           )
 
           if (!isCorrectPassword) {
@@ -71,8 +77,8 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   pages: {
-    signIn: '/chat',
-    error: '/chat'
+    signIn: '/auth',
+    error: '/auth'
   },
   debug: process.env.NODE_ENV === 'development',
   session: {
