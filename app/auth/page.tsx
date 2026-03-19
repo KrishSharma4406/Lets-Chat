@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { signIn } from 'next-auth/react'
+import { useState, useEffect } from 'react'
+import { signIn, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Mail, Lock, User, Eye, EyeOff, Loader, Check, Github } from 'lucide-react'
 
@@ -28,6 +28,15 @@ const getPasswordStrength = (password: string) => {
 
 export default function AuthPage() {
   const router = useRouter()
+  const { status } = useSession()
+
+  // If already authenticated, redirect immediately
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.replace('/chat')
+    }
+  }, [status, router])
+
   const [isSignUp, setIsSignUp] = useState(false)
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -62,12 +71,13 @@ export default function AuthPage() {
 
       if (result?.error) {
         setError(result.error)
+        setLoading(false)
       } else if (result?.ok) {
-        setTimeout(() => router.push('/chat'), 500)
+        // Redirect to chat on successful signin
+        router.replace('/chat')
       }
     } catch (err) {
       setError('An error occurred. Please try again.')
-    } finally {
       setLoading(false)
     }
   }
@@ -103,6 +113,7 @@ export default function AuthPage() {
 
       if (!response.ok) {
         setError(data.error || 'Registration failed')
+        setLoading(false)
         return
       }
 
@@ -114,14 +125,15 @@ export default function AuthPage() {
       })
 
       if (result?.ok) {
-        setTimeout(() => router.push('/chat'), 500)
+        // Redirect to chat on successful signup
+        router.replace('/chat')
       } else {
         setError('Signup successful! Please log in.')
         setIsSignUp(false)
+        setLoading(false)
       }
     } catch (err) {
       setError('An error occurred. Please try again.')
-    } finally {
       setLoading(false)
     }
   }
@@ -240,7 +252,7 @@ export default function AuthPage() {
 
           {/* Login Form */}
           {!isSignUp ? (
-            <form onSubmit={handleLogin} className="space-y-5 form-slide">
+            <form onSubmit={handleLogin} autoComplete="off" className="space-y-5 form-slide">
               <div>
                 <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
                   Email Address
@@ -336,7 +348,7 @@ export default function AuthPage() {
             </form>
           ) : (
             /* Signup Form */
-            <form onSubmit={handleSignUp} className="space-y-5 form-slide">
+            <form onSubmit={handleSignUp} autoComplete="off" className="space-y-5 form-slide">
               <div>
                 <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
                   Full Name
@@ -552,7 +564,7 @@ export default function AuthPage() {
 
         {/* Footer */}
         <p className="mt-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-          🔒 Messages are end-to-end encrypted
+          Messages are end-to-end encrypted
         </p>
       </div>
     </div>
