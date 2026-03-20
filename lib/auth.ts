@@ -3,6 +3,7 @@ import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
 import GitHubProvider from "next-auth/providers/github"
+import { PrismaAdapter } from "@auth/prisma-adapter"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 
@@ -13,6 +14,7 @@ console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'present' : 'MIS
 console.log('GITHUB_ID:', process.env.GITHUB_ID ? 'present' : 'MISSING');
 
 export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || '',
@@ -25,7 +27,7 @@ export const authOptions: NextAuthOptions = {
       allowDangerousEmailAccountLinking: true,
     }),
     CredentialsProvider({
-      name: "Demo Login",
+      name: "Email & Password",
       credentials: {
         email: { label: "Email", type: "email", placeholder: "demo@example.com" },
         password: { label: "Password", type: "password", placeholder: "password" }
@@ -80,26 +82,20 @@ export const authOptions: NextAuthOptions = {
   },
   debug: process.env.NODE_ENV === 'development',
   session: {
-    strategy: "jwt",
+    strategy: "database",
     maxAge: 30 * 24 * 60 * 60, // 30 days
     updateAge: 24 * 60 * 60, // 24 hours
   },
   secret: process.env.NEXTAUTH_SECRET as string,
   callbacks: {
-    async jwt({ token, user}) {
-      if (user) {
-        token.id = user.id
-        token.email = user.email
-        token.name = user.name
-        token.picture = user.image
+    async session({ session, user }) {
+      if (session.user && user) {
+        session.user.id = user.id
       }
-      return token
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string
-        session.user.email = token.email as string
-      }
+      console.log('[Session Callback]', {
+        userId: session.user?.id,
+        email: session.user?.email
+      })
       return session
     },
     async redirect({ url, baseUrl }) {
@@ -118,6 +114,15 @@ export const authOptions: NextAuthOptions = {
       }
       // Default fallback for OAuth redirects
       return `${baseUrl}/chat`
+    },
+    async signIn({ user, account, profile }) {
+      console.log('[OAuth SignIn]', {
+        provider: account?.provider,
+        email: user.email,
+        userId: user.id,
+        name: profile?.name || user.name
+      })
+      return true
     }
   }
 }

@@ -7,20 +7,25 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions)
 
+    console.log('[Conversations GET]', {
+      hasSession: !!session,
+      userId: session?.user?.id,
+      userEmail: session?.user?.email
+    })
+
     if (!session?.user?.id) {
+      console.log('[Conversations GET] No user ID in session')
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    // Fix: Prevent Malformed ObjectID crashes with old dummy user IDs
-    if (session.user.id.length !== 24) {
-      return NextResponse.json([])
-    }
+    const userId = session.user.id
+    console.log('[Conversations GET] Fetching for userId:', userId)
 
     const conversations = await prisma.conversation.findMany({
       where: {
         participants: {
           some: {
-            userId: session.user.id
+            userId: userId
           }
         }
       },
@@ -71,9 +76,10 @@ export async function GET() {
       }
     })
 
+    console.log('[Conversations GET] Found conversations:', conversations.length)
     return NextResponse.json(conversations)
   } catch (error) {
-    console.log(error, 'CONVERSATIONS_ERROR')
+    console.error('[Conversations GET Error]', error)
     return new NextResponse("Internal Error", { status: 500 })
   }
 }

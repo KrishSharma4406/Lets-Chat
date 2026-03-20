@@ -8,11 +8,12 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "avatars.githubusercontent.com" },
       { protocol: "https", hostname: "res.cloudinary.com" },
       { protocol: "https", hostname: "*.googleusercontent.com" },
+      { protocol: "https", hostname: "api.dicebear.com" },
     ],
     dangerouslyAllowSVG: true,
   },
   experimental: {
-    serverActions: { allowedOrigins: ["localhost:3000", "localhost:3001"] },
+    serverActions: { allowedOrigins: ["localhost:3000"] },
   },
   turbopack: {
     root: process.cwd(),

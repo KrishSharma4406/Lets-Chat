@@ -1,12 +1,12 @@
 /**
- * Standalone Socket.IO server — runs on port 3001 alongside Next.js dev server.
+ * Standalone Socket.IO server — runs on port 3000 alongside Next.js dev server.
  * Start with: npx ts-node --project tsconfig.server.json server.ts
  * Or via: npm run server
  */
 import { createServer } from 'http'
 import { Server as SocketIOServer, Socket } from 'socket.io'
 
-const PORT = Number(process.env.SOCKET_PORT || 3001)
+const PORT = Number(process.env.SOCKET_PORT || 3000)
 const ALLOWED_ORIGIN = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 /* ── Types ──────────────────────────────────────────────────── */
@@ -155,15 +155,15 @@ io.on('connection', (socket: AuthSocket) => {
     })
 
     /* ── WebRTC Signaling ───────────────────────────────── */
-    socket.on('webrtc:offer', (data: { to: string; offer: RTCSessionDescriptionInit; callId: string }) => {
+    socket.on('webrtc:offer', (data: { to: string; offer: any; callId: string }) => {
         io.to(`user:${data.to}`).emit('webrtc:offer', { from: socket.userId, offer: data.offer, callId: data.callId })
     })
 
-    socket.on('webrtc:answer', (data: { to: string; answer: RTCSessionDescriptionInit; callId: string }) => {
+    socket.on('webrtc:answer', (data: { to: string; answer: any; callId: string }) => {
         io.to(`user:${data.to}`).emit('webrtc:answer', { from: socket.userId, answer: data.answer, callId: data.callId })
     })
 
-    socket.on('webrtc:ice', (data: { to: string; candidate: RTCIceCandidateInit; callId: string }) => {
+    socket.on('webrtc:ice', (data: { to: string; candidate: any; callId: string }) => {
         io.to(`user:${data.to}`).emit('webrtc:ice', { from: socket.userId, candidate: data.candidate })
     })
 

@@ -9,7 +9,7 @@ import io from 'socket.io-client'
 import { useSocketStore } from '@/lib/stores/socketStore'
 import { useChatStore } from '@/lib/stores/chatStore'
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001'
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3000'
 
 export function useSocket() {
     const { data: session } = useSession()
