@@ -8,9 +8,9 @@ export default function Home() {
   const { data: session } = useSession()
 
   return (
-    <div className="h-screen w-full overflow-y-auto overflow-x-hidden selection:text-white scroll-smooth" style={{ backgroundColor: 'var(--bg-base)', color: 'var(--text-primary)', '--tw-selection-background-color': 'var(--brand-primary)' } as string}>
+    <div className="h-screen w-full overflow-y-auto overflow-x-hidden selection:text-white scroll-smooth" style={{ backgroundColor: 'var(--bg-base)', color: 'var(--text-primary)', '--tw-selection-background-color': 'var(--brand-primary)' } as React.CSSProperties}>
       {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl border-b transition-all duration-300" style={{ backgroundColor: 'rgba(var(--bg-surface-rgb, 255, 255, 255), 0.7)', borderColor: 'var(--border)' }}>
+      <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl border-b transition-all duration-300" style={{ backgroundColor: 'rgba(var(--bg-surface-rgb, 255, 255, 255), 0.7)', borderColor: 'var(--border)' } as React.CSSProperties}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer">
             
