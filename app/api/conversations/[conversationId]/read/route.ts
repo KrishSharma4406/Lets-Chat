@@ -32,6 +32,17 @@ export async function POST(_req: Request, { params }: Params) {
             })
         }
 
+        // Reset unreadCount for this participant
+        await prisma.conversationParticipant.updateMany({
+            where: {
+                conversationId,
+                userId: session.user.id
+            },
+            data: {
+                unreadCount: 0
+            }
+        })
+
         return NextResponse.json({ marked: unseenMessages.length })
     } catch (e) {
         console.error('Mark read error:', e)

@@ -71,6 +71,17 @@ export async function POST(request: Request) {
       }
     })
 
+    // Increment unreadCount for all other participants
+    await prisma.conversationParticipant.updateMany({
+      where: {
+        conversationId,
+        userId: { not: session.user.id }
+      },
+      data: {
+        unreadCount: { increment: 1 }
+      }
+    })
+
     return NextResponse.json(message)
   } catch (error) {
     console.error('[MESSAGES] POST Error:', error)

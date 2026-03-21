@@ -138,7 +138,7 @@ export default function MessageInput({
             {(replyTo || editMessage) && (
                 <div className="flex items-center justify-between px-4 py-2 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-input)' }}>
                     <div className="flex items-start space-x-2 min-w-0">
-                        <div className="w-0.5 h-10 rounded flex-shrink-0" style={{ background: 'var(--brand-accent)' }} />
+                        <div className="w-0.5 h-10 rounded shrink-0" style={{ background: 'var(--brand-accent)' }} />
                         <div className="min-w-0">
                             <p className="text-xs font-semibold" style={{ color: 'var(--brand-secondary)' }}>
                                 {isEdit ? 'Edit message' : `Reply to ${replyTo?.sender.name || replyTo?.sender.email}`}
@@ -161,7 +161,7 @@ export default function MessageInput({
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={filePreview} alt="preview" className="w-14 h-14 rounded-lg object-cover" />
                     ) : (
-                        <div className="w-14 h-14 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'var(--bg-input)' }}>
+                        <div className="w-14 h-14 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--bg-input)' }}>
                             <FileText size={24} style={{ color: 'var(--brand-secondary)' }} />
                         </div>
                     )}
@@ -202,14 +202,14 @@ export default function MessageInput({
 
                 {/* Emoji button */}
                 <button type="button" onClick={() => { setShowEmoji(!showEmoji); setShowFileMenu(false) }}
-                    className="p-2 rounded-full flex-shrink-0 transition-colors hover:opacity-70"
+                    className="p-2 rounded-full shrink-0 transition-colors hover:opacity-70"
                     style={{ color: showEmoji ? 'var(--brand-accent)' : 'var(--text-muted)' }}>
                     <Smile size={22} />
                 </button>
 
                 {/* Attachment button */}
                 <button type="button" onClick={() => { setShowFileMenu(!showFileMenu); setShowEmoji(false) }}
-                    className="p-2 rounded-full flex-shrink-0 transition-colors hover:opacity-70"
+                    className="p-2 rounded-full shrink-0 transition-colors hover:opacity-70"
                     style={{ color: showFileMenu ? 'var(--brand-accent)' : 'var(--text-muted)' }}>
                     <Paperclip size={22} />
                 </button>
@@ -230,7 +230,7 @@ export default function MessageInput({
                 <button
                     type="submit"
                     disabled={!canSend}
-                    className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all"
+                    className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all"
                     style={{
                         background: canSend ? 'var(--brand-accent)' : 'var(--border)',
                         color: canSend ? 'white' : 'var(--text-muted)',

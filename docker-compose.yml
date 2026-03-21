@@ -1,3 +1,5 @@
+version: '3.9'
+
 services:
   web:
     build:
@@ -11,32 +13,45 @@ services:
       - .env
     environment:
       DATABASE_URL: mongodb://db:27017/letschat
-      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NODE_ENV: production
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:3000}
     command: sh -c "npx prisma db push && npm run start"
     ports:
       - "3000:3000"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - lets-chat-network
 
   db:
-    image: mongo:7.0
+    image: mongo:7.0-alpine
     container_name: lets-chat-db
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: letschat
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping').ok"]
       interval: 5s
       timeout: 3s
       retries: 20
+      start_period: 10s
     restart: unless-stopped
     networks:
       - lets-chat-network
 
 volumes:
   mongo_data:
+    driver: local
 
 networks:
   lets-chat-network:

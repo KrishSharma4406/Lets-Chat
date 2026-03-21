@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import Image from 'next/image'
 import { useChatStore, ConversationSummary } from '@/lib/stores/chatStore'
+import { useSocketStore } from '@/lib/stores/socketStore'
 import CreateGroupModal from './CreateGroupModal'
 
 interface Props {
@@ -26,6 +27,7 @@ export default function ConversationList({
 }: Props) {
   const { data: session } = useSession()
   const { conversations, setConversations } = useChatStore()
+  const { socket } = useSocketStore()
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [isDark, setIsDark] = useState(false)
@@ -63,6 +65,23 @@ export default function ConversationList({
     const iv = setInterval(fetchConversations, 8000) // less-aggressive polling as fallback
     return () => clearInterval(iv)
   }, [fetchConversations])
+
+  /* ── Listen for unread count updates via Socket.IO ──── */
+  useEffect(() => {
+    if (!socket) return
+    
+    const handleUnreadUpdate = () => {
+      fetchConversations()
+    }
+
+    socket.on('unread:update', handleUnreadUpdate)
+    socket.on('unread:reset', handleUnreadUpdate)
+    
+    return () => {
+      socket.off('unread:update', handleUnreadUpdate)
+      socket.off('unread:reset', handleUnreadUpdate)
+    }
+  }, [socket, fetchConversations])
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -210,7 +229,7 @@ export default function ConversationList({
           <div className="flex flex-col space-y-px mt-2">
             {[1, 2, 3, 4, 5].map(i => (
               <div key={i} className="flex items-center space-x-3 px-4 py-3 animate-pulse">
-                <div className="w-12 h-12 rounded-full flex-shrink-0" style={{ background: 'var(--border)' }} />
+                <div className="w-12 h-12 rounded-full shrink-0" style={{ background: 'var(--border)' }} />
                 <div className="flex-1 space-y-2">
                   <div className="h-3.5 rounded w-3/4" style={{ background: 'var(--border)' }} />
                   <div className="h-3 rounded w-1/2" style={{ background: 'var(--border)' }} />
@@ -254,7 +273,7 @@ export default function ConversationList({
                 onMouseLeave={(e) => { if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
               >
                 {/* Avatar */}
-                <div className="relative flex-shrink-0">
+                <div className="relative shrink-0">
                   {avatar ? (
                     <Image src={avatar} alt={name} width={48} height={48} className="rounded-full object-cover" />
                   ) : (
@@ -273,14 +292,14 @@ export default function ConversationList({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-0.5">
                     <h3 className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{name}</h3>
-                    <span className="text-xs flex-shrink-0 ml-1" style={{ color: unread > 0 ? 'var(--brand-accent)' : 'var(--text-muted)' }}>
+                    <span className="text-xs shrink-0 ml-1" style={{ color: unread > 0 ? 'var(--brand-accent)' : 'var(--text-muted)' }}>
                       {lastTime}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <p className="text-xs truncate flex items-center space-x-1 flex-1" style={{ color: 'var(--text-secondary)' }}>
                       {conv.messages?.[0]?.sender?.id === currentUserId && (
-                        <CheckCheck size={13} className="flex-shrink-0" style={{ color: 'var(--brand-accent)' }} />
+                        <CheckCheck size={13} className="shrink-0" style={{ color: 'var(--brand-accent)' }} />
                       )}
                       {conv.messages?.[0]?.image && !conv.messages[0].content ? (
                         <span className="flex items-center space-x-1">
@@ -292,7 +311,7 @@ export default function ConversationList({
                       )}
                     </p>
                     {unread > 0 && (
-                      <span className="text-xs text-white rounded-full px-1.5 py-0.5 font-semibold ml-1 flex-shrink-0"
+                      <span className="text-xs text-white rounded-full px-1.5 py-0.5 font-semibold ml-1 shrink-0"
                         style={{ background: 'var(--brand-accent)', minWidth: 20, textAlign: 'center' }}>
                         {unread > 99 ? '99+' : unread}
                       </span>

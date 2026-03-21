@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Standalone Socket.IO server — runs on port 3000 alongside Next.js dev server.
  * Start with: npx ts-node --project tsconfig.server.json server.ts
@@ -9,13 +10,11 @@ import { Server as SocketIOServer, Socket } from 'socket.io'
 const PORT = Number(process.env.SOCKET_PORT || 3000)
 const ALLOWED_ORIGIN = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
-/* ── Types ──────────────────────────────────────────────────── */
 interface AuthSocket extends Socket {
     userId?: string
     userName?: string
 }
 
-/* ── HTTP + Socket.IO bootstrap ─────────────────────────────── */
 const httpServer = createServer()
 const io = new SocketIOServer(httpServer, {
     cors: {
@@ -26,7 +25,6 @@ const io = new SocketIOServer(httpServer, {
     transports: ['websocket', 'polling'],
 })
 
-/* ── Auth middleware ─────────────────────────────────────────── */
 io.use((socket: AuthSocket, next) => {
     const userId = socket.handshake.auth?.userId as string | undefined
     const userName = socket.handshake.auth?.userName as string | undefined
@@ -40,7 +38,6 @@ io.use((socket: AuthSocket, next) => {
     next()
 })
 
-/* ── Online users map: userId -> Set<socketId> ──────────────── */
 const onlineUsers = new Map<string, Set<string>>()
 
 function addOnline(userId: string, socketId: string) {
@@ -83,6 +80,11 @@ io.on('connection', (socket: AuthSocket) => {
         message: Record<string, unknown>
     }) => {
         socket.to(`conv:${payload.conversationId}`).emit('message:new', payload.message)
+        // Broadcast unread count update for all other participants
+        socket.to(`conv:${payload.conversationId}`).emit('unread:update', {
+            conversationId: payload.conversationId,
+            unreadCount: (payload.message as any)?.unreadCount || 1
+        })
     })
 
     socket.on('message:read', (payload: {
@@ -91,6 +93,11 @@ io.on('connection', (socket: AuthSocket) => {
         userId: string
     }) => {
         socket.to(`conv:${payload.conversationId}`).emit('message:read', payload)
+        // Broadcast unread count reset
+        socket.to(`conv:${payload.conversationId}`).emit('unread:reset', {
+            conversationId: payload.conversationId,
+            userId: payload.userId
+        })
     })
 
     socket.on('message:delete', (payload: {

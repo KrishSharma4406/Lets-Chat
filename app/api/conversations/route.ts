@@ -76,8 +76,17 @@ export async function GET() {
       }
     })
 
+    // Map conversations and include unreadCount for current user
+    const conversationsWithUnread = conversations.map(conv => {
+      const currentUserParticipant = conv.participants.find(p => p.userId === userId)
+      return {
+        ...conv,
+        unreadCount: currentUserParticipant?.unreadCount || 0
+      }
+    })
+
     console.log('[Conversations GET] Found conversations:', conversations.length)
-    return NextResponse.json(conversations)
+    return NextResponse.json(conversationsWithUnread)
   } catch (error) {
     console.error('[Conversations GET Error]', error)
     return new NextResponse("Internal Error", { status: 500 })

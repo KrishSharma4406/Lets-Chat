@@ -81,6 +81,20 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
     if (topInView && hasMore && !loading) loadMore()
   }, [topInView, hasMore, loading, loadMore])
 
+  /* ── Mark conversation as read ───────────────────────── */
+  useEffect(() => {
+    if (!conversationId) return
+    const markAsRead = async () => {
+      try {
+        await fetch(`/api/conversations/${conversationId}/read`, { method: 'POST' })
+        socket?.emit('message:read', { conversationId, userId: currentUserId })
+      } catch (e) {
+        console.error('Failed to mark as read:', e)
+      }
+    }
+    markAsRead()
+  }, [conversationId, currentUserId, socket])
+
   /* ── Socket typing events ─────────────────────────────── */
   useEffect(() => {
     if (!socket) return
