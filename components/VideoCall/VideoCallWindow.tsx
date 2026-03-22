@@ -22,6 +22,8 @@ export default function VideoCallWindow() {
   const localStreamRef = useRef<MediaStream | null>(null)
   const [duration, setDuration] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const processedSignalsRef = useRef<Set<string>>(new Set())
 
   const isActive = status === 'active'
   const isCalling = status === 'calling'
@@ -57,12 +59,15 @@ export default function VideoCallWindow() {
     })
 
     peer.on('signal', (data) => {
-      if (!socket || !remoteUserId) return
-      if (initiator) {
-        socket.emit('webrtc:offer', { to: remoteUserId, offer: data, callId })
-      } else {
-        socket.emit('webrtc:answer', { to: remoteUserId, answer: data, callId })
-      }
+      // Send signal via HTTP instead of Socket.IO (works on Vercel)
+      if (!callId) return
+      
+      // data.type is 'offer', 'answer', or 'candidate' from simple-peer
+      fetch(`/api/video-calls/${callId}/signal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: data.type, data }),
+      }).catch(err => console.debug('Signal send error:', err))
     })
 
     peer.on('stream', (remoteStream) => {
@@ -78,7 +83,7 @@ export default function VideoCallWindow() {
     })
 
     peerRef.current = peer
-  }, [socket, remoteUserId, callId]) // eslint-disable-line
+  }, [callId, setCall])
 
   /** Handle call initiation (outgoing) */
   useEffect(() => {
@@ -91,40 +96,48 @@ export default function VideoCallWindow() {
     return () => { mounted = false }
   }, [status]) // eslint-disable-line
 
-  /** WebRTC signaling handlers */
+  /** WebRTC signaling handlers - poll database instead of Socket.IO */
   useEffect(() => {
-    if (!socket) return
+    if (!callId) return
 
-    const onOffer = async ({ offer }: { offer: SimplePeer.SignalData }) => {
-      if (status !== 'active' && status !== 'incoming') return
-      const stream = localStreamRef.current || await startLocalStream()
-      if (!stream) return
-      if (!peerRef.current) createPeer(stream, false)
-      peerRef.current?.signal(offer)
+    const pollSignals = async () => {
+      try {
+        const res = await fetch(`/api/video-calls/${callId}/signal`)
+        if (!res.ok) return
+        
+        const signals = await res.json()
+        for (const signal of signals) {
+          const id = `${signal.fromUserId}-${signal.timestamp}-${signal.type}`
+          if (processedSignalsRef.current.has(id)) continue
+          processedSignalsRef.current.add(id)
+
+          if (signal.type === 'offer') {
+            if (status !== 'active' && status !== 'incoming') return
+            const stream = localStreamRef.current || await startLocalStream()
+            if (!stream) return
+            if (!peerRef.current) createPeer(stream, false)
+            peerRef.current?.signal(signal.data)
+          } else if (signal.type === 'answer') {
+            peerRef.current?.signal(signal.data)
+          } else if (signal.type === 'candidate') {
+            peerRef.current?.signal(signal.data)
+          }
+        }
+      } catch (err) {
+        console.debug('Signal poll error:', err)
+      }
     }
 
-    const onAnswer = ({ answer }: { answer: SimplePeer.SignalData }) => {
-      peerRef.current?.signal(answer)
-    }
+    // Poll every 500ms for signals (much faster than call polling)
+    pollTimerRef.current = setInterval(pollSignals, 500)
 
-    const onIce = ({ candidate }: { candidate: RTCIceCandidateInit }) => {
-      peerRef.current?.signal({ type: 'candidate', candidate } as unknown as SimplePeer.SignalData)
-    }
-
-    const onEnded = () => { toast('Call ended'); cleanUp() }
-
-    socket.on('webrtc:offer', onOffer)
-    socket.on('webrtc:answer', onAnswer)
-    socket.on('webrtc:ice', onIce)
-    socket.on('call:ended', onEnded)
+    // Also check once immediately
+    pollSignals()
 
     return () => {
-      socket.off('webrtc:offer', onOffer)
-      socket.off('webrtc:answer', onAnswer)
-      socket.off('webrtc:ice', onIce)
-      socket.off('call:ended', onEnded)
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current)
     }
-  }, [socket, status]) // eslint-disable-line
+  }, [callId, status, startLocalStream, createPeer]) // eslint-disable-line
 
   const cleanUp = useCallback(() => {
     peerRef.current?.destroy()
@@ -132,13 +145,22 @@ export default function VideoCallWindow() {
     localStreamRef.current?.getTracks().forEach((t) => t.stop())
     localStreamRef.current = null
     if (timerRef.current) clearInterval(timerRef.current)
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current)
+    processedSignalsRef.current.clear()
     resetCall()
   }, [resetCall])
 
   const handleEndCall = useCallback(() => {
-    socket?.emit('call:end', { callId, userId: session?.user?.id })
+    // Notify other user via database update if needed
+    if (callId) {
+      fetch(`/api/video-calls/${callId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'ended', endedAt: new Date(), duration }),
+      }).catch(err => console.debug('End call update error:', err))
+    }
     cleanUp()
-  }, [socket, callId, session, cleanUp])
+  }, [callId, duration, cleanUp])
 
   const handleMuteToggle = useCallback(() => {
     toggleMute()

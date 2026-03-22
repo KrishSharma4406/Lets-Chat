@@ -215,12 +215,9 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
   const handleCall = useCallback((isVideo: boolean) => {
     if (!otherUser) return
     
-    // Generate unique call ID
-    const callId = `${currentUserId}-${otherUser.id}-${Date.now()}`
+    console.log('[ChatWindow] Initiating call:', { recipientId: otherUser.id, isVideo })
     
-    console.log('[ChatWindow] Initiating call:', { callId, recipientId: otherUser.id, isVideo })
-    
-    // Save call to database
+    // Save call to database and get the database ID
     fetch('/api/video-calls', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -229,31 +226,33 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
       .then(r => r.json())
       .then((dbCall) => {
         console.log('[ChatWindow] Call saved to DB:', dbCall)
+        
+        // Use the database call ID for all operations
+        setCall({
+          status: 'calling',
+          callId: dbCall.id,      // Use database ID
+          dbCallId: dbCall.id,    // Also store as dbCallId
+          conversationId,
+          remoteUserId: otherUser.id,
+          remoteUserName: otherUser.name,
+          remoteUserImage: otherUser.image,
+          isVideo,
+        })
+        
+        console.log('[ChatWindow] Emitting call:initiate to socket')
+        socket?.emit('call:initiate', {
+          callId: dbCall.id,
+          callerId: currentUserId,
+          callerName: session?.user?.name || session?.user?.email,
+          callerImage: session?.user?.image,
+          recipientId: otherUser.id,
+          conversationId,
+          isVideo,
+        })
       })
       .catch(err => console.error('[ChatWindow] Failed to save call:', err))
     
-    setCall({
-      status: 'calling',
-      callId,
-      conversationId,
-      remoteUserId: otherUser.id,
-      remoteUserName: otherUser.name,
-      remoteUserImage: otherUser.image,
-      isVideo,
-    })
-    
-    console.log('[ChatWindow] Emitting call:initiate to socket')
-    socket?.emit('call:initiate', {
-      callId,
-      callerId: currentUserId,
-      callerName: session?.user?.name || session?.user?.email,
-      callerImage: session?.user?.image,
-      recipientId: otherUser.id,
-      conversationId,
-      isVideo,
-    })
-
-    // Send call message to chat
+    // Send call message to chat immediately (optimistically)
     const callMessage = isVideo ? 'Video call' : 'Voice call'
     const tempId = `temp_call_${Date.now()}`
     const optimistic: Message = {

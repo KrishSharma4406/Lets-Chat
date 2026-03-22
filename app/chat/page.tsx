@@ -203,14 +203,13 @@ export default function ChatPage() {
         // Check for new incoming call
         if (pendingCalls.length > 0) {
           const call = pendingCalls[0]
-          const callId = `${call.callerId}-${session.user.id}-${call.createdAt}`
           
           // Only set if not already received via Socket.IO
           if (callStatus === 'idle') {
             console.log('[chat/page] Incoming call:', call.caller.name)
             setCall({
               status: 'incoming',
-              callId,
+              callId: call.id,        // Use database call ID directly
               dbCallId: call.id,
               conversationId: null,
               remoteUserId: call.caller.id,
