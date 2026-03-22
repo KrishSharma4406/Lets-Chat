@@ -144,6 +144,7 @@ export default function ChatPage() {
     const onIncoming = (data: {
       callId: string; callerId: string; callerName: string; callerImage: string; isVideo: boolean; conversationId?: string
     }) => {
+      console.log('[chat/page] call:incoming received:', data)
       setCall({
         status: 'incoming',
         callId: data.callId,
@@ -156,6 +157,7 @@ export default function ChatPage() {
     }
 
     const onCallAccepted = (data: { callId: string; callerId: string; conversationId?: string }) => {
+      console.log('[chat/page] call:accepted received:', data)
       // Post acceptance message to chat
       if (data.conversationId) {
         const acceptanceMessage = 'Answered the call'
@@ -173,6 +175,7 @@ export default function ChatPage() {
     }
 
     const onCallRejected = () => {
+      console.log('[chat/page] call:rejected received')
       toast.error('Call was rejected')
       setCall({ status: 'idle' })
     }
@@ -186,6 +189,47 @@ export default function ChatPage() {
       socket.off('call:rejected', onCallRejected)
     }
   }, [socket, setCall])
+
+  /* ── Poll for pending video calls (Vercel fallback) ──── */
+  useEffect(() => {
+    if (!session?.user?.id) return
+
+    const pollCalls = async () => {
+      try {
+        const res = await fetch('/api/video-calls/pending')
+        if (!res.ok) return
+        const pendingCalls = await res.json()
+
+        // Check for new incoming call
+        if (pendingCalls.length > 0) {
+          const call = pendingCalls[0]
+          const callId = `${call.callerId}-${session.user.id}-${call.createdAt}`
+          
+          // Only set if not already received via Socket.IO
+          if (callStatus === 'idle') {
+            console.log('[chat/page] Polling: Found pending call:', call)
+            setCall({
+              status: 'incoming',
+              callId,
+              dbCallId: call.id,
+              conversationId: null,
+              remoteUserId: call.caller.id,
+              remoteUserName: call.caller.name,
+              remoteUserImage: call.caller.image,
+              isVideo: true,
+            })
+          }
+        }
+      } catch (err) {
+        console.error('[chat/page] Error polling calls:', err)
+      }
+    }
+
+    // Poll every 1 second for incoming calls
+    const callPollInterval = setInterval(pollCalls, 1000)
+
+    return () => clearInterval(callPollInterval)
+  }, [session?.user?.id, setCall, callStatus])
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth')

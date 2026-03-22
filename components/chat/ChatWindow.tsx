@@ -218,6 +218,20 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
     // Generate unique call ID
     const callId = `${currentUserId}-${otherUser.id}-${Date.now()}`
     
+    console.log('[ChatWindow] Initiating call:', { callId, recipientId: otherUser.id, isVideo })
+    
+    // Save call to database
+    fetch('/api/video-calls', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipientId: otherUser.id, isVideo }),
+    })
+      .then(r => r.json())
+      .then((dbCall) => {
+        console.log('[ChatWindow] Call saved to DB:', dbCall)
+      })
+      .catch(err => console.error('[ChatWindow] Failed to save call:', err))
+    
     setCall({
       status: 'calling',
       callId,
@@ -228,12 +242,14 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
       isVideo,
     })
     
+    console.log('[ChatWindow] Emitting call:initiate to socket')
     socket?.emit('call:initiate', {
       callId,
       callerId: currentUserId,
       callerName: session?.user?.name || session?.user?.email,
       callerImage: session?.user?.image,
       recipientId: otherUser.id,
+      conversationId,
       isVideo,
     })
 

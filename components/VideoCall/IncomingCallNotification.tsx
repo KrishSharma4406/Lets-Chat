@@ -9,10 +9,18 @@ import { useCallStore } from '@/lib/stores/callStore'
 import { useSocketStore } from '@/lib/stores/socketStore'
 
 export default function IncomingCallNotification() {
-  const { status, callId, conversationId, remoteUserId, remoteUserName, remoteUserImage, isVideo, setCall, resetCall } = useCallStore()
+  const { status, callId, dbCallId, conversationId, remoteUserId, remoteUserName, remoteUserImage, isVideo, setCall, resetCall } = useCallStore()
   const { socket } = useSocketStore()
   
   const handleReject = () => {
+    // Update database if this came from polling
+    if (dbCallId) {
+      fetch(`/api/video-calls/${dbCallId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'rejected' }),
+      }).catch(err => console.error('[IncomingCallNotification] Error rejecting call:', err))
+    }
     socket?.emit('call:reject', { callId, callerId: remoteUserId, conversationId })
     resetCall()
   }
@@ -29,6 +37,14 @@ export default function IncomingCallNotification() {
   if (status !== 'incoming') return null
 
   const handleAccept = async () => {
+    // Update database if this came from polling
+    if (dbCallId) {
+      fetch(`/api/video-calls/${dbCallId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'accepted', startedAt: new Date() }),
+      }).catch(err => console.error('[IncomingCallNotification] Error accepting call:', err))
+    }
     if (!socket || !remoteUserId) return
     socket.emit('call:accept', { callId, callerId: remoteUserId, conversationId })
     socket.emit('call:join', callId)

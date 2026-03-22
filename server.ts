@@ -143,7 +143,10 @@ io.on('connection', (socket: AuthSocket) => {
         conversationId: string
         isVideo: boolean
     }) => {
-        io.to(`user:${data.recipientId}`).emit('call:incoming', data)
+        console.log(`[Socket] call:initiate - from ${data.callerId} to ${data.recipientId}, isVideo: ${data.isVideo}`)
+        console.log(`[Socket] Emitting call:incoming to user:${data.recipientId}`)
+        const clients = io.to(`user:${data.recipientId}`).emit('call:incoming', data)
+        console.log(`[Socket] call:incoming emitted`)
     })
 
     socket.on('call:accept', (data: { callId: string; callerId: string; conversationId: string }) => {

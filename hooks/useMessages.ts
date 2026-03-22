@@ -169,13 +169,13 @@ export function useMessages(conversationId: string | null) {
             socket.on('reaction:update', onReaction)
         }
 
-        // Polling fallback: if socket is not connected, poll every 3 seconds
+        // Polling fallback: if socket is not connected, poll every 1 second
         const pollInterval = setInterval(() => {
             if (!socket?.connected) {
                 console.log('[useMessages] Socket not connected, polling for updates...')
                 fetchPage()
             }
-        }, 3000)
+        }, 1000)
 
         return () => {
             clearInterval(pollInterval)

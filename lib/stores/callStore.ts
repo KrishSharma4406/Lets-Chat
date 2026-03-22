@@ -8,6 +8,7 @@ export type CallStatus = 'idle' | 'calling' | 'incoming' | 'active' | 'ended'
 interface CallState {
     status: CallStatus
     callId: string | null
+    dbCallId: string | null  // Actual database call ID for DB updates
     conversationId: string | null
     remoteUserId: string | null
     remoteUserName: string | null
@@ -26,6 +27,7 @@ interface CallState {
 export const useCallStore = create<CallState>((set) => ({
     status: 'idle',
     callId: null,
+    dbCallId: null,
     conversationId: null,
     remoteUserId: null,
     remoteUserName: null,
@@ -41,6 +43,7 @@ export const useCallStore = create<CallState>((set) => ({
         set({
             status: 'idle',
             callId: null,
+            dbCallId: null,
             conversationId: null,
             remoteUserId: null,
             remoteUserName: null,
