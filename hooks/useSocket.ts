@@ -19,7 +19,7 @@ export function useSocket() {
     useEffect(() => {
         if (!session?.user?.id || socket) return
 
-        console.log('[useSocket] Connecting to:', SOCKET_URL)
+        console.debug('[useSocket] Connecting to:', SOCKET_URL)
         const s = io(SOCKET_URL, {
             auth: {
                 userId: session.user.id,
@@ -33,17 +33,18 @@ export function useSocket() {
         })
 
         s.on('connect', () => {
-            console.log('[useSocket] Connected to Socket.IO server')
+            console.debug('[useSocket] Connected to Socket.IO server')
             setConnected(true)
         })
 
         s.on('disconnect', (reason) => {
-            console.log('[useSocket] Disconnected:', reason)
+            console.debug('[useSocket] Disconnected:', reason)
             setConnected(false)
         })
 
         s.on('connect_error', (error) => {
             console.warn('[useSocket] Connection error:', error.message)
+            // This is expected on Vercel - polling will handle it
         })
 
         s.on('presence:update', ({ userId, isOnline }: { userId: string; isOnline: boolean }) => {

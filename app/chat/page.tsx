@@ -207,7 +207,7 @@ export default function ChatPage() {
           
           // Only set if not already received via Socket.IO
           if (callStatus === 'idle') {
-            console.log('[chat/page] Polling: Found pending call:', call)
+            console.log('[chat/page] Incoming call:', call.caller.name)
             setCall({
               status: 'incoming',
               callId,
@@ -216,17 +216,17 @@ export default function ChatPage() {
               remoteUserId: call.caller.id,
               remoteUserName: call.caller.name,
               remoteUserImage: call.caller.image,
-              isVideo: true,
+              isVideo: call.isVideo,
             })
           }
         }
       } catch (err) {
-        console.error('[chat/page] Error polling calls:', err)
+        // Silently fail - this is just polling
       }
     }
 
-    // Poll every 1 second for incoming calls
-    const callPollInterval = setInterval(pollCalls, 1000)
+    // Poll every 3 seconds for incoming calls (reduced from 1s)
+    const callPollInterval = setInterval(pollCalls, 3000)
 
     return () => clearInterval(callPollInterval)
   }, [session?.user?.id, setCall, callStatus])

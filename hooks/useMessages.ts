@@ -56,7 +56,7 @@ export function useMessages(conversationId: string | null) {
             console.log('[useMessages] fetching from:', url)
             
             const controller = new AbortController()
-            const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
+            const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout (more lenient)
             
             const res = await fetch(url, { signal: controller.signal })
             clearTimeout(timeoutId)
@@ -82,12 +82,18 @@ export function useMessages(conversationId: string | null) {
             // API now returns oldest-first (asc), append new older messages when paginating
             setMessages((prev) => cursor ? [...prev, ...data] : data)
         } catch (e) {
-            console.error('[useMessages] fetch error:', {
-                error: e instanceof Error ? e.message : String(e),
-                conversationId,
-                type: e instanceof TypeError ? 'Network/Fetch Error' : 'Other Error'
-            })
-            setHasMore(false)
+            // Ignore abort errors (timeout) - will retry next time
+            if (e instanceof Error && e.name === 'AbortError') {
+                console.debug('[useMessages] Request timeout, will retry next poll')
+                // Don't set hasMore to false, just skip this fetch
+            } else if (e instanceof Error) {
+                console.error('[useMessages] fetch error:', {
+                    error: e.message,
+                    conversationId,
+                    type: e instanceof TypeError ? 'Network/Fetch Error' : 'Other Error'
+                })
+                setHasMore(false)
+            }
         } finally {
             setLoading(false)
         }
@@ -169,13 +175,12 @@ export function useMessages(conversationId: string | null) {
             socket.on('reaction:update', onReaction)
         }
 
-        // Polling fallback: if socket is not connected, poll every 1 second
+        // Polling fallback: if socket is not connected, poll every 2 seconds
         const pollInterval = setInterval(() => {
             if (!socket?.connected) {
-                console.log('[useMessages] Socket not connected, polling for updates...')
                 fetchPage()
             }
-        }, 1000)
+        }, 2000)
 
         return () => {
             clearInterval(pollInterval)

@@ -57,6 +57,7 @@ export async function POST(request: Request) {
       data: {
         callerId: session.user.id,
         recipientId,
+        isVideo,
         status: "pending"
       },
       include: {

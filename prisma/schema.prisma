@@ -175,6 +175,7 @@ model VideoCall {
   callerId    String   @db.ObjectId
   recipientId String   @db.ObjectId
   status      String   @default("pending")
+  isVideo     Boolean  @default(true)
   startedAt   DateTime?
   endedAt     DateTime?
   duration    Int?
