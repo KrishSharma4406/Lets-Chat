@@ -111,15 +111,17 @@ export function useMessages(conversationId: string | null) {
         })
     }, [conversationId, fetchPage])
 
-    /* ── Socket real-time events ────────────────────────── */
+    /* ── Socket real-time events + Polling fallback ────── */
     useEffect(() => {
-        if (!socket || !conversationId) return
+        if (!conversationId) return
 
-        socket.emit('join:conversation', conversationId)
+        // Join if socket available
+        if (socket) {
+            socket.emit('join:conversation', conversationId)
+        }
 
         const onNew = (msg: Message) => {
             setMessages((prev) => [...prev, msg])
-            // Mark read immediately
             fetch(`/api/conversations/${conversationId}/read`, { method: 'POST' }).catch(() => { })
         }
 
@@ -158,21 +160,35 @@ export function useMessages(conversationId: string | null) {
             )
         }
 
-        socket.on('message:new', onNew)
-        socket.on('message:deleted', onDeleted)
-        socket.on('message:edited', onEdited)
-        socket.on('message:read', onRead)
-        socket.on('reaction:update', onReaction)
+        // Socket listeners
+        if (socket) {
+            socket.on('message:new', onNew)
+            socket.on('message:deleted', onDeleted)
+            socket.on('message:edited', onEdited)
+            socket.on('message:read', onRead)
+            socket.on('reaction:update', onReaction)
+        }
+
+        // Polling fallback: if socket is not connected, poll every 3 seconds
+        const pollInterval = setInterval(() => {
+            if (!socket?.connected) {
+                console.log('[useMessages] Socket not connected, polling for updates...')
+                fetchPage()
+            }
+        }, 3000)
 
         return () => {
-            socket.emit('leave:conversation', conversationId)
-            socket.off('message:new', onNew)
-            socket.off('message:deleted', onDeleted)
-            socket.off('message:edited', onEdited)
-            socket.off('message:read', onRead)
-            socket.off('reaction:update', onReaction)
+            clearInterval(pollInterval)
+            if (socket) {
+                socket.emit('leave:conversation', conversationId)
+                socket.off('message:new', onNew)
+                socket.off('message:deleted', onDeleted)
+                socket.off('message:edited', onEdited)
+                socket.off('message:read', onRead)
+                socket.off('reaction:update', onReaction)
+            }
         }
-    }, [socket, conversationId])
+    }, [socket, conversationId, fetchPage])
 
     const loadMore = useCallback(() => {
         if (!loading && hasMore && cursorRef.current) {

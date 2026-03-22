@@ -19,6 +19,7 @@ export function useSocket() {
     useEffect(() => {
         if (!session?.user?.id || socket) return
 
+        console.log('[useSocket] Connecting to:', SOCKET_URL)
         const s = io(SOCKET_URL, {
             auth: {
                 userId: session.user.id,
@@ -27,15 +28,22 @@ export function useSocket() {
             transports: ['websocket', 'polling'],
             reconnection: true,
             reconnectionDelay: 1000,
-            reconnectionAttempts: 10,
+            reconnectionDelayMax: 5000,
+            reconnectionAttempts: Infinity,
         })
 
         s.on('connect', () => {
+            console.log('[useSocket] Connected to Socket.IO server')
             setConnected(true)
         })
 
-        s.on('disconnect', () => {
+        s.on('disconnect', (reason) => {
+            console.log('[useSocket] Disconnected:', reason)
             setConnected(false)
+        })
+
+        s.on('connect_error', (error) => {
+            console.warn('[useSocket] Connection error:', error.message)
         })
 
         s.on('presence:update', ({ userId, isOnline }: { userId: string; isOnline: boolean }) => {
