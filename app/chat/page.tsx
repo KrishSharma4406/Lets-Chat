@@ -227,7 +227,7 @@ export default function ChatPage() {
             </div>
             <div className="flex items-center space-x-2 px-4 py-2 rounded-full text-xs"
               style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
-              🔒 End-to-end encrypted
+              End-to-end encrypted
             </div>
           </div>
         )}
