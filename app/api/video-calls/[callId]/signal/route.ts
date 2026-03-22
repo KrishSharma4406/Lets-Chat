@@ -32,14 +32,14 @@ setInterval(() => {
   }
 }, 30000)
 
-export async function POST(request: NextRequest, { params }: { params: { callId: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ callId: string }> }) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { callId } = params
+    const { callId } = await params
     const { type, data } = await request.json()
 
     // Get call to verify user is participant
@@ -81,14 +81,14 @@ export async function POST(request: NextRequest, { params }: { params: { callId:
   }
 }
 
-export async function GET(request: NextRequest, { params }: { params: { callId: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ callId: string }> }) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { callId } = params
+    const { callId } = await params
 
     // Get call to verify user is participant
     const videoCall = await prisma.videoCall.findUnique({
