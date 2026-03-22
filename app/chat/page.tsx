@@ -12,6 +12,7 @@ import { useSocket } from '@/hooks/useSocket'
 import { useCallStore } from '@/lib/stores/callStore'
 import { useSocketStore } from '@/lib/stores/socketStore'
 import { MessageCircle } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 const VideoCallWindow = dynamic(() => import('@/components/VideoCall/VideoCallWindow'), { ssr: false })
 
@@ -141,19 +142,49 @@ export default function ChatPage() {
   useEffect(() => {
     if (!socket) return
     const onIncoming = (data: {
-      callId: string; callerId: string; callerName: string; callerImage: string; isVideo: boolean
+      callId: string; callerId: string; callerName: string; callerImage: string; isVideo: boolean; conversationId?: string
     }) => {
       setCall({
         status: 'incoming',
         callId: data.callId,
+        conversationId: data.conversationId || null,
         remoteUserId: data.callerId,
         remoteUserName: data.callerName,
         remoteUserImage: data.callerImage,
         isVideo: data.isVideo,
       })
     }
+
+    const onCallAccepted = (data: { callId: string; callerId: string; conversationId?: string }) => {
+      // Post acceptance message to chat
+      if (data.conversationId) {
+        const acceptanceMessage = 'Answered the call'
+        fetch(`/api/conversations/${data.conversationId}/messages`, {
+          method: 'POST',
+          body: JSON.stringify({ message: acceptanceMessage }),
+        })
+          .then(r => r.json())
+          .then((saved) => {
+            socket?.emit('message:send', { conversationId: data.conversationId, message: saved })
+          })
+          .catch(err => console.error('Failed to post acceptance message:', err))
+      }
+      setCall({ status: 'active', startedAt: new Date() })
+    }
+
+    const onCallRejected = () => {
+      toast.error('Call was rejected')
+      setCall({ status: 'idle' })
+    }
+
     socket.on('call:incoming', onIncoming)
-    return () => { socket.off('call:incoming', onIncoming) }
+    socket.on('call:accepted', onCallAccepted)
+    socket.on('call:rejected', onCallRejected)
+    return () => {
+      socket.off('call:incoming', onIncoming)
+      socket.off('call:accepted', onCallAccepted)
+      socket.off('call:rejected', onCallRejected)
+    }
   }, [socket, setCall])
 
   useEffect(() => {

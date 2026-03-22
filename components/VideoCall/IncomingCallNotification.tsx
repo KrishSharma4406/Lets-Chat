@@ -7,11 +7,15 @@ import { Phone, PhoneOff, Video } from 'lucide-react'
 import Image from 'next/image'
 import { useCallStore } from '@/lib/stores/callStore'
 import { useSocketStore } from '@/lib/stores/socketStore'
-import SimplePeer from 'simple-peer'
 
 export default function IncomingCallNotification() {
-  const { status, callId, remoteUserId, remoteUserName, remoteUserImage, isVideo, setCall, resetCall } = useCallStore()
+  const { status, callId, conversationId, remoteUserId, remoteUserName, remoteUserImage, isVideo, setCall, resetCall } = useCallStore()
   const { socket } = useSocketStore()
+  
+  const handleReject = () => {
+    socket?.emit('call:reject', { callId, callerId: remoteUserId, conversationId })
+    resetCall()
+  }
 
   // Auto-reject after 45 seconds
   useEffect(() => {
@@ -26,29 +30,14 @@ export default function IncomingCallNotification() {
 
   const handleAccept = async () => {
     if (!socket || !remoteUserId) return
-    socket.emit('call:accept', { callId, callerId: remoteUserId })
+    socket.emit('call:accept', { callId, callerId: remoteUserId, conversationId })
     socket.emit('call:join', callId)
-
-    // Get local media and signal back
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true })
-      const peer = new SimplePeer({ initiator: false, stream, trickle: true })
-      peer.on('signal', (data) => {
-        socket.emit('webrtc:answer', { to: remoteUserId, answer: data, callId })
-      })
-      setCall({ status: 'active', startedAt: new Date() })
-    } catch {
-      handleReject()
-    }
+    setCall({ status: 'active', startedAt: new Date() })
   }
 
-  const handleReject = () => {
-    socket?.emit('call:reject', { callId, callerId: remoteUserId })
-    resetCall()
-  }
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[340px] rounded-3xl shadow-xl overflow-hidden animate-slide-up"
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-85 rounded-3xl shadow-xl overflow-hidden animate-slide-up"
       style={{ background: 'var(--brand-primary)' }}>
       <div className="relative p-5">
         {/* Animated ring */}

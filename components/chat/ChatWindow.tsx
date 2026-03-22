@@ -53,13 +53,19 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
 
   /* ── Fetch conversation details ───────────────────────── */
   useEffect(() => {
+    if (!conversationId) return
     fetch('/api/conversations')
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json()
+      })
       .then((list: ConvDetails[]) => {
         const c = list.find((x) => x.id === conversationId)
         if (c) setConv(c)
       })
-      .catch(() => { })
+      .catch((err) => {
+        console.error('[ChatWindow] Failed to fetch conversation details:', err)
+      })
   }, [conversationId])
 
   /* ── Scroll to bottom on first load ──────────────────── */
@@ -208,21 +214,57 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
   /* ── Initiate call ────────────────────────────────────── */
   const handleCall = useCallback((isVideo: boolean) => {
     if (!otherUser) return
+    
+    // Generate unique call ID
+    const callId = `${currentUserId}-${otherUser.id}-${Date.now()}`
+    
     setCall({
       status: 'calling',
+      callId,
+      conversationId,
       remoteUserId: otherUser.id,
       remoteUserName: otherUser.name,
       remoteUserImage: otherUser.image,
       isVideo,
     })
+    
     socket?.emit('call:initiate', {
+      callId,
       callerId: currentUserId,
       callerName: session?.user?.name || session?.user?.email,
       callerImage: session?.user?.image,
       recipientId: otherUser.id,
       isVideo,
     })
-  }, [otherUser, currentUserId, session, setCall, socket])
+
+    // Send call message to chat
+    const callMessage = isVideo ? 'Video call' : 'Voice call'
+    const tempId = `temp_call_${Date.now()}`
+    const optimistic: Message = {
+      id: tempId,
+      content: callMessage,
+      createdAt: new Date().toISOString(),
+      sender: { id: currentUserId, name: session?.user?.name || null, email: session?.user?.email || '', image: session?.user?.image || null },
+      seenBy: [],
+      reactions: [],
+    }
+    addOptimistic(optimistic)
+
+    // Send to API
+    fetch(`/api/conversations/${conversationId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: callMessage }),
+    })
+      .then((res) => res.json())
+      .then((saved: Message) => {
+        replaceOptimistic(tempId, saved)
+        socket?.emit('message:send', { conversationId, message: saved })
+      })
+      .catch(() => {
+        removeOptimistic(tempId)
+      })
+  }, [otherUser, currentUserId, session, conversationId, setCall, socket, addOptimistic, replaceOptimistic, removeOptimistic])
 
   return (
     <div className="flex flex-col h-full">

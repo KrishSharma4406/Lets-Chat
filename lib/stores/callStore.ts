@@ -8,6 +8,7 @@ export type CallStatus = 'idle' | 'calling' | 'incoming' | 'active' | 'ended'
 interface CallState {
     status: CallStatus
     callId: string | null
+    conversationId: string | null
     remoteUserId: string | null
     remoteUserName: string | null
     remoteUserImage: string | null
@@ -25,6 +26,7 @@ interface CallState {
 export const useCallStore = create<CallState>((set) => ({
     status: 'idle',
     callId: null,
+    conversationId: null,
     remoteUserId: null,
     remoteUserName: null,
     remoteUserImage: null,
@@ -39,6 +41,7 @@ export const useCallStore = create<CallState>((set) => ({
         set({
             status: 'idle',
             callId: null,
+            conversationId: null,
             remoteUserId: null,
             remoteUserName: null,
             remoteUserImage: null,

@@ -7,18 +7,23 @@ interface Params { params: Promise<{ conversationId: string }> }
 
 // GET paginated messages
 export async function GET(req: Request, { params }: Params) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) return new NextResponse('Unauthorized', { status: 401 })
-  const { conversationId } = await params
-
-  const url = new URL(req.url)
-  const limit = Math.min(Number(url.searchParams.get('limit') || 30), 50)
-  const cursor = url.searchParams.get('cursor') || undefined
-
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      console.warn('[GET /messages] Unauthorized - no session')
+      return new NextResponse('Unauthorized', { status: 401 })
+    }
+    
+    const { conversationId } = await params
+    console.log('[GET /messages] Fetching for conversation:', conversationId, 'user:', session.user.id)
+
+    const url = new URL(req.url)
+    const limit = Math.min(Number(url.searchParams.get('limit') || 30), 50)
+    const cursor = url.searchParams.get('cursor') || undefined
+
     const messages = await prisma.message.findMany({
       where: { conversationId, isDeleted: false },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'asc' },
       take: limit,
       ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
       include: {
@@ -29,9 +34,10 @@ export async function GET(req: Request, { params }: Params) {
         },
       },
     })
+    console.log('[GET /messages] Returning', messages.length, 'messages')
     return NextResponse.json(messages)
   } catch (e) {
-    console.error('GET messages error:', e)
+    console.error('[GET /messages] Error:', e instanceof Error ? e.message : String(e))
     return new NextResponse('Internal Error', { status: 500 })
   }
 }

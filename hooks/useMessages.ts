@@ -46,21 +46,48 @@ export function useMessages(conversationId: string | null) {
 
     /* ── Fetch a page ───────────────────────────────────── */
     const fetchPage = useCallback(async (cursor?: string) => {
-        if (!conversationId) return
+        if (!conversationId) {
+            console.warn('[useMessages] fetchPage: conversationId is missing')
+            return
+        }
         setLoading(true)
         try {
             const url = `/api/conversations/${conversationId}/messages?limit=${PAGE_SIZE}${cursor ? `&cursor=${cursor}` : ''}`
-            const res = await fetch(url)
-            if (!res.ok) throw new Error('fetch failed')
+            console.log('[useMessages] fetching from:', url)
+            
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
+            
+            const res = await fetch(url, { signal: controller.signal })
+            clearTimeout(timeoutId)
+            
+            console.log('[useMessages] response status:', res.status)
+            
+            if (!res.ok) {
+                let errorDetail = `HTTP ${res.status}`
+                try {
+                    const errorText = await res.text()
+                    if (errorText) errorDetail += `: ${errorText}`
+                } catch {}
+                console.error('[useMessages] fetch failed:', errorDetail)
+                throw new Error(errorDetail)
+            }
+            
             const data: Message[] = await res.json()
+            console.log('[useMessages] messages received:', data.length)
 
             if (data.length < PAGE_SIZE) setHasMore(false)
             if (data.length > 0) cursorRef.current = data[data.length - 1].id
 
-            // Prepend older messages
-            setMessages((prev) => cursor ? [...data.reverse(), ...prev] : data.reverse())
+            // API now returns oldest-first (asc), append new older messages when paginating
+            setMessages((prev) => cursor ? [...prev, ...data] : data)
         } catch (e) {
-            console.error('useMessages fetchPage error:', e)
+            console.error('[useMessages] fetch error:', {
+                error: e instanceof Error ? e.message : String(e),
+                conversationId,
+                type: e instanceof TypeError ? 'Network/Fetch Error' : 'Other Error'
+            })
+            setHasMore(false)
         } finally {
             setLoading(false)
         }
@@ -68,13 +95,20 @@ export function useMessages(conversationId: string | null) {
 
     /* ── Initial load ───────────────────────────────────── */
     useEffect(() => {
-        if (!conversationId) { setMessages([]); return }
+        if (!conversationId) {
+            console.log('useMessages: conversationId not ready, resetting state')
+            setMessages([])
+            return
+        }
+        console.log('useMessages: loading messages for conversation:', conversationId)
         cursorRef.current = null
         setHasMore(true)
         setMessages([])
         fetchPage()
         // Mark read
-        fetch(`/api/conversations/${conversationId}/read`, { method: 'POST' }).catch(() => { })
+        fetch(`/api/conversations/${conversationId}/read`, { method: 'POST' }).catch((err) => {
+            console.error('Failed to mark conversation as read:', err)
+        })
     }, [conversationId, fetchPage])
 
     /* ── Socket real-time events ────────────────────────── */

@@ -140,16 +140,17 @@ io.on('connection', (socket: AuthSocket) => {
         callerName: string
         callerImage: string
         recipientId: string
+        conversationId: string
         isVideo: boolean
     }) => {
         io.to(`user:${data.recipientId}`).emit('call:incoming', data)
     })
 
-    socket.on('call:accept', (data: { callId: string; callerId: string }) => {
+    socket.on('call:accept', (data: { callId: string; callerId: string; conversationId: string }) => {
         io.to(`user:${data.callerId}`).emit('call:accepted', data)
     })
 
-    socket.on('call:reject', (data: { callId: string; callerId: string }) => {
+    socket.on('call:reject', (data: { callId: string; callerId: string; conversationId: string }) => {
         io.to(`user:${data.callerId}`).emit('call:rejected', data)
     })
 
