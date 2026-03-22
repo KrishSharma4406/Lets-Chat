@@ -10,7 +10,7 @@ import { prisma } from "@/lib/prisma"
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)
-    const { recipientId } = await request.json()
+    const { recipientId, isVideo } = await request.json()
 
     if (!session?.user?.id) {
       return new NextResponse("Unauthorized", { status: 401 })
