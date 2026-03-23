@@ -17,6 +17,7 @@ interface Props {
   onSelectConversation: (id: string) => void
   onNewChat: () => void
   currentUserId: string
+  refreshTrigger?: number
 }
 
 export default function ConversationList({
@@ -24,6 +25,7 @@ export default function ConversationList({
   onSelectConversation,
   onNewChat,
   currentUserId,
+  refreshTrigger = 0,
 }: Props) {
   const { data: session } = useSession()
   const { conversations, setConversations } = useChatStore()
@@ -82,6 +84,13 @@ export default function ConversationList({
       socket.off('unread:reset', handleUnreadUpdate)
     }
   }, [socket, fetchConversations])
+
+  /* ── Silent auto-refresh from parent trigger ──── */
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      fetchConversations()
+    }
+  }, [refreshTrigger, fetchConversations])
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {

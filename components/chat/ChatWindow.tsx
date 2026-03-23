@@ -25,6 +25,7 @@ import toast from 'react-hot-toast'
 interface Props {
   conversationId: string
   onBack?: () => void          // mobile: back to sidebar
+  refreshTrigger?: number
 }
 
 interface ConvDetails {
@@ -32,7 +33,7 @@ interface ConvDetails {
   participants: Array<{ user: { id: string; name: string | null; email: string; image: string | null; isOnline?: boolean; lastSeen?: string | null } }>
 }
 
-export default function ChatWindow({ conversationId, onBack }: Props) {
+export default function ChatWindow({ conversationId, onBack, refreshTrigger = 0 }: Props) {
   const { data: session } = useSession()
   const currentUserId = session?.user?.id || ''
   const { messages, loading, hasMore, loadMore, addOptimistic, removeOptimistic, replaceOptimistic } = useMessages(conversationId)
@@ -67,6 +68,23 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
         console.error('[ChatWindow] Failed to fetch conversation details:', err)
       })
   }, [conversationId])
+
+  /* ── Silent auto-refresh from parent trigger ──────────── */
+  useEffect(() => {
+    if (!conversationId || refreshTrigger <= 0) return
+    fetch('/api/conversations')
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json()
+      })
+      .then((list: ConvDetails[]) => {
+        const c = list.find((x) => x.id === conversationId)
+        if (c) setConv(c)
+      })
+      .catch((err) => {
+        console.error('[ChatWindow] Failed to refresh conversation details:', err)
+      })
+  }, [conversationId, refreshTrigger])
 
   /* ── Scroll to bottom on first load ──────────────────── */
   useEffect(() => {
