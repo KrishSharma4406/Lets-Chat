@@ -30,11 +30,7 @@ services:
       - .env
     environment:
       DATABASE_URL: mongodb://db:27017/letschat
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change-me-in-production}
       NODE_ENV: production
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
-      NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:3000}
     command: sh -c "npx prisma db push --skip-generate && npm run start"
     ports:
       - "3000:3000"
