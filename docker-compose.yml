@@ -23,6 +23,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: lets-chat-web
+    hostname: lets-chat-web
     depends_on:
       db:
         condition: service_healthy
@@ -31,6 +32,8 @@ services:
     environment:
       DATABASE_URL: mongodb://db:27017/letschat
       NODE_ENV: production
+      NEXTAUTH_URL: http://localhost:3000
+      TRUST_HOST: "true"
     command: sh -c "npx prisma db push --skip-generate && npm run start"
     ports:
       - "3000:3000"

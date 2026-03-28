@@ -131,7 +131,6 @@ export default function ChatPage() {
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
   const [showUserList, setShowUserList] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(true)
-  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   // Global socket connection
   useSocket()
@@ -231,15 +230,6 @@ export default function ChatPage() {
     return () => clearInterval(callPollInterval)
   }, [session?.user?.id, setCall, callStatus])
 
-  /* ── Silent auto-refresh every 2 seconds ──── */
-  useEffect(() => {
-    const refreshInterval = setInterval(() => {
-      setRefreshTrigger(prev => prev + 1)
-    }, 2000)
-
-    return () => clearInterval(refreshInterval)
-  }, [])
-
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth')
   }, [status, router])
@@ -282,7 +272,6 @@ export default function ChatPage() {
           onSelectConversation={handleSelectConversation}
           onNewChat={() => setShowUserList(true)}
           currentUserId={session.user.id}
-          refreshTrigger={refreshTrigger}
         />
       </div>
 
@@ -292,7 +281,6 @@ export default function ChatPage() {
           <ChatWindow
             conversationId={selectedConversation}
             onBack={() => { setMobileSidebarOpen(true); setSelectedConversation(null) }}
-            refreshTrigger={refreshTrigger}
           />
         ) : (
           /* Empty state */
