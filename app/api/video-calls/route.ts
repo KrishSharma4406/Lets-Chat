@@ -13,15 +13,15 @@ export async function POST(request: Request) {
     const { recipientId, isVideo } = await request.json()
 
     if (!session?.user?.id) {
-      return new NextResponse("Unauthorized", { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     if (!recipientId) {
-      return new NextResponse("Recipient ID is required", { status: 400 })
+      return NextResponse.json({ error: "Recipient ID is required" }, { status: 400 })
     }
 
     if (recipientId === session.user.id) {
-      return new NextResponse("Cannot call yourself", { status: 400 })
+      return NextResponse.json({ error: "Cannot call yourself" }, { status: 400 })
     }
 
     // Check if recipient is blocked
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     })
 
     if (isBlocked) {
-      return new NextResponse("You are blocked by this user", { status: 403 })
+      return NextResponse.json({ error: "You are blocked by this user" }, { status: 403 })
     }
 
     // Check if user is blocking recipient
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     })
 
     if (isBlocking) {
-      return new NextResponse("You have blocked this user", { status: 403 })
+      return NextResponse.json({ error: "You have blocked this user" }, { status: 403 })
     }
 
     // Create video call record
@@ -72,8 +72,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json(call)
   } catch (error) {
-    console.log(error, 'VIDEO_CALL_CREATE_ERROR')
-    return new NextResponse("Internal Error", { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('[POST /api/video-calls] VIDEO_CALL_CREATE_ERROR:', errorMessage, error)
+    return NextResponse.json({ error: "Internal server error", details: errorMessage }, { status: 500 })
   }
 }
 
@@ -86,7 +87,7 @@ export async function GET(request: Request) {
     const session = await getServerSession(authOptions)
 
     if (!session?.user?.id) {
-      return new NextResponse("Unauthorized", { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const calls = await prisma.videoCall.findMany({
@@ -110,7 +111,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json(calls)
   } catch (error) {
-    console.log(error, 'VIDEO_CALL_LIST_ERROR')
-    return new NextResponse("Internal Error", { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('[GET /api/video-calls] VIDEO_CALL_LIST_ERROR:', errorMessage, error)
+    return NextResponse.json({ error: "Internal server error", details: errorMessage }, { status: 500 })
   }
 }

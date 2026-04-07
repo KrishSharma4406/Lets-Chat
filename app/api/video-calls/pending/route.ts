@@ -11,7 +11,7 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return new NextResponse('Unauthorized', { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const pendingCalls = await prisma.videoCall.findMany({
@@ -30,7 +30,8 @@ export async function GET() {
 
     return NextResponse.json(pendingCalls)
   } catch (e) {
-    console.error('[GET /api/video-calls/pending] Error:', e)
-    return new NextResponse('Internal Error', { status: 500 })
+    const errorMessage = e instanceof Error ? e.message : String(e)
+    console.error('[GET /api/video-calls/pending] Error:', errorMessage, e)
+    return NextResponse.json({ error: 'Internal server error', details: errorMessage }, { status: 500 })
   }
 }

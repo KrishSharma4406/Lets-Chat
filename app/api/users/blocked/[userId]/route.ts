@@ -29,16 +29,16 @@ export async function DELETE(
     })
 
     if (!blocked) {
-      return new NextResponse("User not blocked", { status: 404 })
+      return NextResponse.json({ error: "User not blocked" }, { status: 404 })
     }
 
     await prisma.blockedUser.delete({
       where: { id: blocked.id }
     })
 
-    return new NextResponse("User unblocked successfully")
+    return NextResponse.json({ success: true, message: "User unblocked successfully" })
   } catch (error) {
     console.log(error, 'UNBLOCK_USER_ERROR')
-    return new NextResponse("Internal Error", { status: 500 })
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

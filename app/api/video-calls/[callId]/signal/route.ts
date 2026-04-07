@@ -76,8 +76,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Signal POST error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('[POST /api/video-calls/[callId]/signal] Error:', errorMessage, error)
+    return NextResponse.json({ error: 'Internal server error', details: errorMessage }, { status: 500 })
   }
 }
 
@@ -112,7 +113,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(remoteSignals)
   } catch (error) {
-    console.error('Signal GET error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('[GET /api/video-calls/[callId]/signal] Error:', errorMessage, error)
+    return NextResponse.json({ error: 'Internal server error', details: errorMessage }, { status: 500 })
   }
 }

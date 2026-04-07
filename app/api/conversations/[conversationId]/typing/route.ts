@@ -62,11 +62,11 @@ export async function POST(
         }
       })
 
-      return new NextResponse("Typing stopped")
+      return NextResponse.json({ success: true, message: "Typing stopped" })
     }
   } catch (error) {
     console.log(error, 'TYPING_INDICATOR_ERROR')
-    return new NextResponse("Internal Error", { status: 500 })
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 

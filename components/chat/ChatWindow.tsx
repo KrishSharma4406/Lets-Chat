@@ -223,7 +223,16 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ recipientId: otherUser.id, isVideo }),
     })
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) {
+          return r.json().then(data => {
+            const errorMsg = data?.details || data?.error || `Failed to initiate call: ${r.status}`
+            console.error('[ChatWindow] API Error:', { data, status: r.status })
+            throw new Error(errorMsg)
+          })
+        }
+        return r.json()
+      })
       .then((dbCall) => {
         console.log('[ChatWindow] Call saved to DB:', dbCall)
         
@@ -250,7 +259,10 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
           isVideo,
         })
       })
-      .catch(err => console.error('[ChatWindow] Failed to save call:', err))
+      .catch(err => {
+        console.error('[ChatWindow] Failed to save call:', err)
+        toast.error(err.message || 'Failed to initiate call')
+      })
     
     // Send call message to chat immediately (optimistically)
     const callMessage = isVideo ? 'Video call' : 'Voice call'

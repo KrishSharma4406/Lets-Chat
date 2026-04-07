@@ -17,11 +17,11 @@ export async function PATCH(
     const { status, duration } = await request.json()
 
     if (!session?.user?.id) {
-      return new NextResponse("Unauthorized", { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     if (!status) {
-      return new NextResponse("Status is required", { status: 400 })
+      return NextResponse.json({ error: "Status is required" }, { status: 400 })
     }
 
     const call = await prisma.videoCall.findUnique({
@@ -29,16 +29,16 @@ export async function PATCH(
     })
 
     if (!call) {
-      return new NextResponse("Call not found", { status: 404 })
+      return NextResponse.json({ error: "Call not found" }, { status: 404 })
     }
 
     // Only recipient can accept, only participants can end
     if (status === "accepted" && call.recipientId !== session.user.id) {
-      return new NextResponse("Only recipient can accept call", { status: 403 })
+      return NextResponse.json({ error: "Only recipient can accept call" }, { status: 403 })
     }
 
     if (status === "rejected" && call.recipientId !== session.user.id) {
-      return new NextResponse("Only recipient can reject call", { status: 403 })
+      return NextResponse.json({ error: "Only recipient can reject call" }, { status: 403 })
     }
 
     const updateData: { status: string; startedAt?: Date; endedAt?: Date; duration?: number } = { status }
@@ -67,8 +67,9 @@ export async function PATCH(
 
     return NextResponse.json(updatedCall)
   } catch (error) {
-    console.log(error, 'VIDEO_CALL_UPDATE_ERROR')
-    return new NextResponse("Internal Error", { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('[PATCH /api/video-calls/[callId]] VIDEO_CALL_UPDATE_ERROR:', errorMessage, error)
+    return NextResponse.json({ error: "Internal server error", details: errorMessage }, { status: 500 })
   }
 }
 
@@ -85,7 +86,7 @@ export async function GET(
     const session = await getServerSession(authOptions)
 
     if (!session?.user?.id) {
-      return new NextResponse("Unauthorized", { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const call = await prisma.videoCall.findUnique({
@@ -101,7 +102,7 @@ export async function GET(
     })
 
     if (!call) {
-      return new NextResponse("Call not found", { status: 404 })
+      return NextResponse.json({ error: "Call not found" }, { status: 404 })
     }
 
     // Check authorization
@@ -109,12 +110,13 @@ export async function GET(
       call.callerId !== session.user.id &&
       call.recipientId !== session.user.id
     ) {
-      return new NextResponse("Unauthorized", { status: 403 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
     return NextResponse.json(call)
   } catch (error) {
-    console.log(error, 'VIDEO_CALL_GET_ERROR')
-    return new NextResponse("Internal Error", { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('[GET /api/video-calls/[callId]] VIDEO_CALL_GET_ERROR:', errorMessage, error)
+    return NextResponse.json({ error: "Internal server error", details: errorMessage }, { status: 500 })
   }
 }
