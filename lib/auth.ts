@@ -7,9 +7,24 @@ import { PrismaAdapter } from "@auth/prisma-adapter"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 
+// Auto-detect NEXTAUTH_URL from environment or construct from request
+const getNextAuthUrl = () => {
+  if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL
+  }
+  // For Vercel deployments
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`
+  }
+  // Fallback to localhost
+  return 'http://localhost:3000'
+}
+
+const NEXTAUTH_URL = getNextAuthUrl()
+
 console.log('NextAuth config loading...');
+console.log('NEXTAUTH_URL:', NEXTAUTH_URL);
 console.log('NEXTAUTH_SECRET:', process.env.NEXTAUTH_SECRET ? 'present' : 'MISSING');
-console.log('NEXTAUTH_URL:', process.env.NEXTAUTH_URL || 'not set');
 console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'present' : 'MISSING');
 console.log('GITHUB_ID:', process.env.GITHUB_ID ? 'present' : 'MISSING');
 

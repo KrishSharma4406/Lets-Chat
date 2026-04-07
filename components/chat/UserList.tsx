@@ -112,7 +112,7 @@ export default function UserList({ onClose, onSelectUser }: Props) {
                 onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-input)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
-                <div className="relative flex-shrink-0">
+                <div className="relative shrink-0">
                   {u.image ? (
                     <Image src={u.image} alt={u.name || ''} width={42} height={42} className="rounded-full object-cover" />
                   ) : (

@@ -14,7 +14,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer">
             
-            <span className="font-bold text-xl tracking-tight">Let&apos;s Chat</span>
+            <span className="font-bold text-xl tracking-tight text-green-600">Let&apos;s Chat</span>
           </div>
           <div className="flex items-center gap-4">
             {session ? (
@@ -50,7 +50,7 @@ export default function Home() {
       {/* Hero Section */}
       <main className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
         {/* Abstract Background Shapes */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl h-[600px] pointer-events-none opacity-20 dark:opacity-10">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl h-150 pointer-events-none opacity-20 dark:opacity-10">
           <><div className="absolute top-0 right-10 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl animate-blob" style={{ background: 'var(--brand-primary)' }}></div><div className="absolute top-0 -left-4 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" style={{ background: 'var(--brand-secondary)' }}></div><div className="absolute -bottom-8 left-20 w-72 h-72 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" style={{ background: 'var(--brand-teal)' }}></div><style>{`
             @keyframes blob {
               0% { transform: translate(0px, 0px) scale(1); }
@@ -126,7 +126,7 @@ export default function Home() {
                 <div className="w-3 h-3 rounded-full bg-green-400"></div>
               </div>
             </div>
-            <div className="flex h-[400px] md:h-[600px] opacity-90 grayscale-[10%] select-none">
+            <div className="flex h-100 md:h-150 opacity-90 grayscale-10 select-none">
               <div className="w-1/3 border-r p-4 hidden md:block" style={{ borderColor: 'var(--border)' }}>
                 <div className="h-4 w-1/2 rounded mb-6" style={{ background: 'var(--border)' }}></div>
                 {[1, 2, 3, 4, 5].map(i => (
