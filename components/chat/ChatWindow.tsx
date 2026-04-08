@@ -44,6 +44,9 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
   const [typingUsers, setTypingUsers] = useState<string[]>([])
   const [replyTo, setReplyTo] = useState<Message | null>(null)
   const [editMsg, setEditMsg] = useState<Message | null>(null)
+  const [aiMessages, setAiMessages] = useState<Message[]>([])
+  const [aiLoading, setAiLoading] = useState(false)
+  const [isAiAssistant, setIsAiAssistant] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const firstLoadRef = useRef(true)
@@ -54,6 +57,38 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
   /* ── Fetch conversation details ───────────────────────── */
   useEffect(() => {
     if (!conversationId) return
+
+    // Handle AI Assistant specially
+    if (conversationId === 'ai-assistant') {
+      setIsAiAssistant(true)
+      setConv(null)
+      setAiLoading(true)
+      
+      fetch('/api/ai-assistant')
+        .then(r => r.json())
+        .then((messages: any[]) => {
+          const formattedMessages: Message[] = messages.map(msg => ({
+            id: msg.id,
+            content: msg.content,
+            createdAt: msg.createdAt,
+            sender: {
+              id: msg.sender === 'ai' ? 'ai-assistant' : currentUserId,
+              name: msg.sender === 'ai' ? 'My AI Assistant' : session?.user?.name || null,
+              email: msg.sender === 'ai' ? 'ai@assistant.local' : session?.user?.email || '',
+              image: msg.sender === 'ai' ? null : session?.user?.image || null,
+            },
+            seenBy: [],
+            reactions: [],
+          }))
+          setAiMessages(formattedMessages)
+        })
+        .catch(err => console.error('[ChatWindow] Failed to fetch AI messages:', err))
+        .finally(() => setAiLoading(false))
+      
+      return
+    }
+
+    setIsAiAssistant(false)
     fetch('/api/conversations')
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
@@ -66,7 +101,7 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
       .catch((err) => {
         console.error('[ChatWindow] Failed to fetch conversation details:', err)
       })
-  }, [conversationId])
+  }, [conversationId, currentUserId, session])
 
   /* ── Scroll to bottom on first load ──────────────────── */
   useEffect(() => {
@@ -101,7 +136,7 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
     markAsRead()
   }, [conversationId, currentUserId, socket])
 
-  /* ── Socket typing events ─────────────────────────────── */
+  /* ── Socket typing events ──*/
   useEffect(() => {
     if (!socket) return
     const onTypingStart = ({ userId, userName, conversationId: cid }: { userId: string; userName: string; conversationId: string }) => {
@@ -120,7 +155,7 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
     }
   }, [socket, conversationId, currentUserId, typingMap])
 
-  /* ── Header: other user info ─────────────────────────── */
+  /* ── Header: other user info ── */
   const otherUser = conv && !conv.isGroup
     ? conv.participants.find((p) => p.user.id !== currentUserId)?.user
     : null
@@ -129,22 +164,79 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
     ? onlineUsers.has(otherUser.id) || otherUser.isOnline
     : false
 
-  const headerName = conv?.isGroup
-    ? (conv.name || 'Group Chat')
-    : (otherUser?.name || otherUser?.email || '…')
+  const headerName = isAiAssistant
+    ? 'My AI Assistant'
+    : conv?.isGroup
+      ? (conv.name || 'Group Chat')
+      : (otherUser?.name || otherUser?.email || '…')
 
-  const headerSub = conv?.isGroup
-    ? `${conv.participants.length} members`
-    : isOnline
-      ? 'Online'
-      : otherUser?.lastSeen
-        ? `Last seen ${formatDistanceToNow(new Date(otherUser.lastSeen), { addSuffix: true })}`
-        : 'Offline'
+  const headerSub = isAiAssistant
+    ? 'Always here to help'
+    : conv?.isGroup
+      ? `${conv.participants.length} members`
+      : isOnline
+        ? 'Online'
+        : otherUser?.lastSeen
+          ? `Last seen ${formatDistanceToNow(new Date(otherUser.lastSeen), { addSuffix: true })}`
+          : 'Offline'
 
-  /* ── Send message ─────────────────────────────────────── */
+  /* ── Send message ── */
   const handleSend = useCallback(async (
     content: string, image?: string, fileName?: string, fileType?: string, replyToId?: string
   ) => {
+    // Handle AI Assistant messages
+    if (isAiAssistant) {
+      const tempId = `temp_${Date.now()}`
+      const userMessage: Message = {
+        id: tempId,
+        content,
+        createdAt: new Date().toISOString(),
+        sender: { id: currentUserId, name: session?.user?.name || null, email: session?.user?.email || '', image: session?.user?.image || null },
+        seenBy: [],
+        reactions: [],
+      }
+
+      setAiMessages(prev => [...prev, userMessage])
+
+      try {
+        const res = await fetch('/api/ai-assistant', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: content }),
+        })
+        if (!res.ok) throw new Error('Failed to send')
+        const data = await res.json()
+
+        // Add the actual user message and AI response
+        setAiMessages(prev => {
+          const updated = prev.filter(m => m.id !== tempId)
+          return [
+            ...updated,
+            {
+              id: data.userMessage.id,
+              content: data.userMessage.content,
+              createdAt: data.userMessage.createdAt,
+              sender: { id: currentUserId, name: session?.user?.name || null, email: session?.user?.email || '', image: session?.user?.image || null },
+              seenBy: [],
+              reactions: [],
+            },
+            {
+              id: data.aiMessage.id,
+              content: data.aiMessage.content,
+              createdAt: data.aiMessage.createdAt,
+              sender: { id: 'ai-assistant', name: 'My AI Assistant', email: 'ai@assistant.local', image: null },
+              seenBy: [],
+              reactions: [],
+            },
+          ]
+        })
+      } catch (err) {
+        toast.error('Failed to send message')
+        setAiMessages(prev => prev.filter(m => m.id !== tempId))
+      }
+      return
+    }
+
     const tempId = `temp_${Date.now()}`
     const optimistic: Message = {
       id: tempId, content, image, fileName, fileType, replyToId,
@@ -170,7 +262,7 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
       removeOptimistic(tempId)
       toast.error('Failed to send message')
     }
-  }, [conversationId, currentUserId, session, addOptimistic, replaceOptimistic, removeOptimistic, socket])
+  }, [conversationId, currentUserId, session, isAiAssistant, addOptimistic, replaceOptimistic, removeOptimistic, socket])
 
   /* ── Edit message ─────────────────────────────────────── */
   const handleSaveEdit = useCallback(async (messageId: string, content: string) => {
@@ -306,7 +398,9 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
 
         {/* Avatar */}
         <div className="relative">
-          {conv?.isGroup ? (
+          {isAiAssistant ? (
+            <Image src="/ai-assistant.png" alt="AI Assistant" width={40} height={40} className="rounded-full object-cover" />
+          ) : conv?.isGroup ? (
             <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.2)' }}>
               <Users size={20} className="text-white" />
             </div>
@@ -317,7 +411,7 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
               {headerName[0]?.toUpperCase()}
             </div>
           )}
-          {isOnline && !conv?.isGroup && (
+          {isOnline && !conv?.isGroup && !isAiAssistant && (
             <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-green-600" style={{ background: 'var(--online)' }} />
           )}
         </div>
@@ -329,7 +423,7 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
 
         {/* Action buttons */}
         <div className="flex items-center space-x-1">
-          {!conv?.isGroup && (
+          {!conv?.isGroup && !isAiAssistant && (
             <>
               <button onClick={() => handleCall(false)} className="p-2 rounded-full hover:bg-white/10 transition-colors">
                 <Phone size={20} className="text-white" />
@@ -339,12 +433,16 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
               </button>
             </>
           )}
-          <button className="p-2 rounded-full hover:bg-white/10 transition-colors">
-            <Search size={20} className="text-white" />
-          </button>
-          <button className="p-2 rounded-full hover:bg-white/10 transition-colors">
-            <MoreVertical size={20} className="text-white" />
-          </button>
+          {!isAiAssistant && (
+            <>
+              <button className="p-2 rounded-full hover:bg-white/10 transition-colors">
+                <Search size={20} className="text-white" />
+              </button>
+              <button className="p-2 rounded-full hover:bg-white/10 transition-colors">
+                <MoreVertical size={20} className="text-white" />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -353,7 +451,7 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
         {/* Top sentinel for infinite scroll */}
         <div ref={topRef} className="h-1" />
 
-        {loading && (
+        {(loading || aiLoading) && (
           <div className="flex justify-center py-4">
             <div className="flex space-x-1">
               <span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" />
@@ -361,19 +459,28 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
           </div>
         )}
 
-        {messages.length === 0 && !loading && (
+        {(isAiAssistant ? aiMessages : messages).length === 0 && !loading && !aiLoading && (
           <div className="flex flex-col items-center justify-center h-full space-y-3 py-16">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'var(--brand-primary)' }}>
-              <Users size={28} className="text-white" />
+          <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'var(--brand-primary)' }}>
+              {isAiAssistant ? (
+                <Image src="/ai-assistant.png" alt="AI Assistant" width={60} height={60} className="rounded-full object-cover" />
+              ) : (
+                <Users size={28} className="text-white" />
+              )}
             </div>
-            <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>No messages yet</p>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Start the conversation! 👋</p>
+            <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+              {isAiAssistant ? 'Start a conversation with your AI Assistant' : 'No messages yet'}
+            </p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              {isAiAssistant ? 'Ask me anything!' : 'Start the conversation!'}
+            </p>
           </div>
         )}
 
-        {messages.map((msg, idx) => {
-          const isOwn = msg.sender.id === currentUserId
-          const prevMsg = messages[idx - 1]
+        {(isAiAssistant ? aiMessages : messages).map((msg, idx) => {
+          const messageList = isAiAssistant ? aiMessages : messages
+          const isOwn = msg.sender.id === currentUserId || (isAiAssistant && msg.sender.id === currentUserId)
+          const prevMsg = messageList[idx - 1]
           const showAvatar = !prevMsg || prevMsg.sender.id !== msg.sender.id
           const showDateSep = !prevMsg || (new Date(msg.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() > 5 * 60 * 1000)
 
@@ -391,13 +498,13 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
                 message={msg}
                 isOwn={isOwn}
                 isGroup={conv?.isGroup || false}
-                isLast={idx === messages.length - 1}
+                isLast={idx === messageList.length - 1}
                 currentUserId={currentUserId}
                 showAvatar={showAvatar}
                 onReply={setReplyTo}
-                onDelete={handleDelete}
-                onEdit={setEditMsg}
-                onReact={handleReact}
+                onDelete={isAiAssistant ? undefined : handleDelete}
+                onEdit={isAiAssistant ? undefined : setEditMsg}
+                onReact={isAiAssistant ? undefined : handleReact}
               />
             </div>
           )

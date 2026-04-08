@@ -251,7 +251,37 @@ export default function ConversationList({
             )}
           </div>
         ) : (
-          filtered.map((conv) => {
+          <>
+            {/* AI Assistant Item */}
+            {!search && (
+              <div
+                onClick={() => onSelectConversation('ai-assistant')}
+                className="flex items-center space-x-3 px-4 py-3 cursor-pointer transition-colors border-b"
+                style={{
+                  borderColor: 'var(--border-subtle)',
+                  background: selectedConversation === 'ai-assistant' ? 'var(--bg-elevated)' : 'transparent',
+                }}
+                onMouseEnter={(e) => { if (selectedConversation !== 'ai-assistant') (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-input)' }}
+                onMouseLeave={(e) => { if (selectedConversation !== 'ai-assistant') (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
+              >
+                {/* Avatar */}
+                <div className="relative shrink-0">
+                  <Image src="/ai-assistant.png" alt="AI Assistant" width={48} height={48} className="rounded-full object-cover" />
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <h3 className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>My AI Assistant</h3>
+                    <span className="text-xs shrink-0 ml-1" style={{ color: 'var(--text-muted)' }}>now</span>
+                  </div>
+                  <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>Always here to help</p>
+                </div>
+              </div>
+            )}
+
+            {/* Regular Conversations */}
+            {filtered.map((conv) => {
             const online = isOtherOnline(conv)
             const avatar = getAvatar(conv)
             const name = getName(conv)
@@ -321,7 +351,8 @@ export default function ConversationList({
                 </div>
               </div>
             )
-          })
+          })}
+            </>
         )}
       </div>
 
