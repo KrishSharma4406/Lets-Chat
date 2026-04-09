@@ -401,13 +401,13 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
       <div className="flex items-center space-x-2 sm:space-x-3 px-3 sm:px-4 py-3 z-10 shadow-sm"
         style={{ background: 'var(--brand-primary)', color: 'white' }}>
         {onBack && (
-          <button onClick={onBack} className="mr-1 p-1 rounded-full hover:opacity-70 transition-opacity flex-shrink-0">
+          <button onClick={onBack} className="mr-1 p-1 rounded-full hover:opacity-70 transition-opacity shrink-0">
             <ArrowLeft size={20} className="text-white" />
           </button>
         )}
 
         {/* Avatar */}
-        <div className="relative flex-shrink-0">
+        <div className="relative shrink-0">
           {isAiAssistant ? (
             <Image src="/ai-assistant.png" alt="AI Assistant" width={40} height={40} className="rounded-full object-cover w-10 h-10" />
           ) : conv?.isGroup ? (
@@ -435,20 +435,20 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
         <div className="flex items-center space-x-1">
           {!conv?.isGroup && !isAiAssistant && (
             <>
-              <button onClick={() => handleCall(false)} className="p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0">
+              <button onClick={() => handleCall(false)} className="p-2 rounded-full hover:bg-white/10 transition-colors shrink-0">
                 <Phone size={18} className="text-white" />
               </button>
-              <button onClick={() => handleCall(true)} className="p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0">
+              <button onClick={() => handleCall(true)} className="p-2 rounded-full hover:bg-white/10 transition-colors shrink-0">
                 <Video size={18} className="text-white" />
               </button>
             </>
           )}
           {!isAiAssistant && (
             <>
-              <button className="p-2 rounded-full hover:bg-white/10 transition-colors hidden sm:block flex-shrink-0">
+              <button className="p-2 rounded-full hover:bg-white/10 transition-colors hidden sm:block shrink-0">
                 <Search size={18} className="text-white" />
               </button>
-              <button className="p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0">
+              <button className="p-2 rounded-full hover:bg-white/10 transition-colors shrink-0">
                 <MoreVertical size={18} className="text-white" />
               </button>
             </>

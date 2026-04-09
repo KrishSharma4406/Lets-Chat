@@ -5,32 +5,8 @@ import { prisma } from '@/lib/prisma'
 
 /**
  * Store and retrieve WebRTC signaling data (offers, answers, ICE candidates)
- * Used as a fallback for Socket.IO on Vercel (serverless)
+ * Uses Prisma database for persistent storage across serverless instances
  */
-
-interface SignalData {
-  type: 'offer' | 'answer' | 'candidate'
-  data: any
-  fromUserId: string
-  timestamp: number
-}
-
-// Temporary in-memory store for signaling data (per-call)
-// In production with multiple instances, use Redis or database
-const signalStore = new Map<string, SignalData[]>()
-
-// Clean up old signals (older than 5 minutes)
-setInterval(() => {
-  const now = Date.now()
-  for (const [callId, signals] of signalStore.entries()) {
-    const filtered = signals.filter(s => now - s.timestamp < 5 * 60 * 1000)
-    if (filtered.length === 0) {
-      signalStore.delete(callId)
-    } else {
-      signalStore.set(callId, filtered)
-    }
-  }
-}, 30000)
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ callId: string }> }) {
   try {
@@ -56,23 +32,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // Store signal
-    if (!signalStore.has(callId)) {
-      signalStore.set(callId, [])
-    }
-
-    const signals = signalStore.get(callId)!
-    signals.push({
-      type: type as 'offer' | 'answer' | 'candidate',
-      data,
-      fromUserId: session.user.id,
-      timestamp: Date.now(),
+    // Store signal in database
+    await prisma.webRTCSignal.create({
+      data: {
+        callId,
+        fromUserId: session.user.id,
+        type: type as 'offer' | 'answer' | 'candidate',
+        data: JSON.stringify(data),
+      },
     })
-
-    // Keep only last 100 signals per call
-    if (signals.length > 100) {
-      signals.shift()
-    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
@@ -105,16 +73,76 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // Get signals from remote user
-    const allSignals = signalStore.get(callId) || []
+    // Get signals from remote user (not from current user)
     const remoteUserId = videoCall.callerId === session.user.id ? videoCall.recipientId : videoCall.callerId
 
-    const remoteSignals = allSignals.filter(s => s.fromUserId === remoteUserId)
+    const signals = await prisma.webRTCSignal.findMany({
+      where: {
+        callId,
+        fromUserId: remoteUserId,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    })
 
-    return NextResponse.json(remoteSignals)
+    // Transform signals to match expected format
+    const transformedSignals = signals.map((signal) => ({
+      ...signal,
+      data: JSON.parse(signal.data),
+      timestamp: signal.createdAt.getTime(),
+    }))
+
+    return NextResponse.json(transformedSignals)
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     console.error('[GET /api/video-calls/[callId]/signal] Error:', errorMessage, error)
+    return NextResponse.json({ error: 'Internal server error', details: errorMessage }, { status: 500 })
+  }
+}
+
+/**
+ * DELETE /api/video-calls/[callId]/signal
+ * Clean up old signals for a call (optional cleanup endpoint)
+ */
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ callId: string }> }) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { callId } = await params
+
+    // Get call to verify user is participant
+    const videoCall = await prisma.videoCall.findUnique({
+      where: { id: callId },
+    })
+
+    if (!videoCall) {
+      return NextResponse.json({ error: 'Call not found' }, { status: 404 })
+    }
+
+    const isParticipant = videoCall.callerId === session.user.id || videoCall.recipientId === session.user.id
+    if (!isParticipant) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    // Delete old signals (older than 10 minutes) to prevent database bloat
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
+    const deleted = await prisma.webRTCSignal.deleteMany({
+      where: {
+        callId,
+        createdAt: {
+          lt: tenMinutesAgo,
+        },
+      },
+    })
+
+    return NextResponse.json({ deleted: deleted.count })
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('[DELETE /api/video-calls/[callId]/signal] Error:', errorMessage, error)
     return NextResponse.json({ error: 'Internal server error', details: errorMessage }, { status: 500 })
   }
 }

@@ -138,7 +138,7 @@ export default function MessageInput({
             {(replyTo || editMessage) && (
                 <div className="flex items-center justify-between px-2 sm:px-4 py-2 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-input)' }}>
                     <div className="flex items-start space-x-2 min-w-0">
-                        <div className="w-0.5 h-10 rounded flex-shrink-0" style={{ background: 'var(--brand-accent)' }} />
+                        <div className="w-0.5 h-10 rounded shrink-0" style={{ background: 'var(--brand-accent)' }} />
                         <div className="min-w-0">
                             <p className="text-xs font-semibold" style={{ color: 'var(--brand-secondary)' }}>
                                 {isEdit ? 'Edit message' : `Reply to ${replyTo?.sender.name || replyTo?.sender.email}`}
@@ -148,7 +148,7 @@ export default function MessageInput({
                             </p>
                         </div>
                     </div>
-                    <button onClick={isEdit ? onClearEdit : onClearReply} className="p-1 rounded-full ml-2 flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
+                    <button onClick={isEdit ? onClearEdit : onClearReply} className="p-1 rounded-full ml-2 shrink-0" style={{ color: 'var(--text-muted)' }}>
                         <X size={16} />
                     </button>
                 </div>
@@ -159,9 +159,9 @@ export default function MessageInput({
                 <div className="flex items-center space-x-2 sm:space-x-3 px-2 sm:px-4 py-2 border-b" style={{ borderColor: 'var(--border)' }}>
                     {selectedFile.type.startsWith('image/') ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={filePreview} alt="preview" className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg object-cover flex-shrink-0" />
+                        <img src={filePreview} alt="preview" className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg object-cover shrink-0" />
                     ) : (
-                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'var(--bg-input)' }}>
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--bg-input)' }}>
                             <FileText size={20} style={{ color: 'var(--brand-secondary)' }} />
                         </div>
                     )}
@@ -169,7 +169,7 @@ export default function MessageInput({
                         <p className="text-xs sm:text-sm truncate font-medium" style={{ color: 'var(--text-primary)' }}>{selectedFile.name}</p>
                         <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{(selectedFile.size / 1024).toFixed(1)} KB</p>
                     </div>
-                    <button onClick={clearFile} className="p-1.5 rounded-full flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
+                    <button onClick={clearFile} className="p-1.5 rounded-full shrink-0" style={{ color: 'var(--text-muted)' }}>
                         <X size={16} />
                     </button>
                 </div>
@@ -202,14 +202,14 @@ export default function MessageInput({
 
                 {/* Emoji button */}
                 <button type="button" onClick={() => { setShowEmoji(!showEmoji); setShowFileMenu(false) }}
-                    className="p-2 rounded-full flex-shrink-0 transition-colors hover:opacity-70"
+                    className="p-2 rounded-full shrink-0 transition-colors hover:opacity-70"
                     style={{ color: showEmoji ? 'var(--brand-accent)' : 'var(--text-muted)' }}>
                     <Smile size={18} />
                 </button>
 
                 {/* Attachment button */}
                 <button type="button" onClick={() => { setShowFileMenu(!showFileMenu); setShowEmoji(false) }}
-                    className="p-2 rounded-full flex-shrink-0 transition-colors hover:opacity-70"
+                    className="p-2 rounded-full shrink-0 transition-colors hover:opacity-70"
                     style={{ color: showFileMenu ? 'var(--brand-accent)' : 'var(--text-muted)' }}>
                     <Paperclip size={18} />
                 </button>

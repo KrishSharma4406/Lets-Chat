@@ -11,7 +11,7 @@
 import { useState, useRef } from 'react'
 import { format } from 'date-fns'
 import Image from 'next/image'
-import { Check, CheckCheck, Reply, Copy, Edit2, Trash2, MoreHorizontal, Smile } from 'lucide-react'
+import {CheckCheck, Reply, Copy, Edit2, Trash2, MoreHorizontal, Smile } from 'lucide-react'
 import type { Message } from '@/hooks/useMessages'
 import toast from 'react-hot-toast'
 
@@ -34,8 +34,8 @@ function TickIcon({ seenBy, senderId, currentUserId }: { seenBy?: Array<{ userId
     if (senderId !== currentUserId) return null
     const readByOther = seenBy?.some((s) => s.userId !== currentUserId)
     return readByOther
-        ? <CheckCheck size={15} className="tick-read flex-shrink-0" />
-        : <CheckCheck size={15} className="tick-delivered flex-shrink-0" />
+        ? <CheckCheck size={15} className="tick-read shrink-0" />
+        : <CheckCheck size={15} className="tick-delivered shrink-0" />
 }
 
 export default function MessageBubble({
@@ -111,7 +111,7 @@ export default function MessageBubble({
                     <a href={message.image!} download={message.fileName || 'file'}
                         className="flex items-center space-x-2 px-2 sm:px-3 py-2 rounded-lg mb-1 transition-opacity hover:opacity-80 w-full max-w-xs"
                         style={{ background: isOwn ? 'rgba(255,255,255,0.15)' : 'var(--bg-input)' }}>
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                             style={{ background: isOwn ? 'rgba(255,255,255,0.2)' : 'var(--brand-accent)' }}>
                             <span className="text-xs font-bold text-white">{(message.fileName?.split('.').pop() || 'FILE').toUpperCase().slice(0, 3)}</span>
                         </div>
@@ -134,7 +134,7 @@ export default function MessageBubble({
                     {message.isEdited && (
                         <span className="text-xs" style={{ color: isOwn ? 'rgba(255,255,255,0.55)' : 'var(--text-muted)' }}>edited</span>
                     )}
-                    <span className="text-xs flex-shrink-0" style={{ color: isOwn ? 'rgba(255,255,255,0.6)' : 'var(--text-muted)' }}>
+                    <span className="text-xs shrink-0" style={{ color: isOwn ? 'rgba(255,255,255,0.6)' : 'var(--text-muted)' }}>
                         {format(new Date(message.createdAt), 'HH:mm')}
                     </span>
                     <TickIcon seenBy={message.seenBy} senderId={message.sender.id} currentUserId={currentUserId} />
@@ -147,12 +147,12 @@ export default function MessageBubble({
         <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group mb-0.5`}>
             {/* Incoming avatar (groups) */}
             {!isOwn && isGroup && showAvatar && (
-                <div className="w-7 h-7 rounded-full flex-shrink-0 mt-1 mr-1 flex items-center justify-center text-xs text-white font-semibold"
+                <div className="w-7 h-7 rounded-full shrink-0 mt-1 mr-1 flex items-center justify-center text-xs text-white font-semibold"
                     style={{ background: 'var(--brand-secondary)' }}>
                     {(message.sender.name || message.sender.email)?.[0]?.toUpperCase()}
                 </div>
             )}
-            {!isOwn && isGroup && !showAvatar && <div className="w-8 flex-shrink-0" />}
+            {!isOwn && isGroup && !showAvatar && <div className="w-8 shrink-0" />}
 
             <div className={`relative flex flex-col ${isOwn ? 'items-end' : 'items-start'}`} style={{ maxWidth: 'min(75%, 100vw - 80px)' }}>
                 {/* Sender name for groups */}

@@ -50,6 +50,16 @@ export async function PATCH(
       if (duration) {
         updateData.duration = duration
       }
+      
+      // Clean up old signals for this call to prevent database bloat
+      try {
+        await prisma.webRTCSignal.deleteMany({
+          where: { callId }
+        })
+      } catch (err) {
+        console.debug('Error cleaning up signals:', err)
+        // Don't fail the call end if cleanup fails
+      }
     }
 
     const updatedCall = await prisma.videoCall.update({

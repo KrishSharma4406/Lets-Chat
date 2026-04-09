@@ -136,7 +136,7 @@ export default function ConversationList({
       {/* Header */}
       <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}>
         <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
-          <div className="relative cursor-pointer flex-shrink-0" onClick={() => window.location.href = '/settings'}>
+          <div className="relative cursor-pointer shrink-0" onClick={() => window.location.href = '/settings'}>
             {session?.user?.image ? (
               <Image src={session.user.image} alt="avatar" width={40} height={40} className="rounded-full object-cover w-10 h-10" />
             ) : (
@@ -153,7 +153,7 @@ export default function ConversationList({
           </div>
         </div>
 
-        <div className="flex items-center space-x-0.5 sm:space-x-1 flex-shrink-0">
+        <div className="flex items-center space-x-0.5 sm:space-x-1 shrink-0">
           {/* Unread badge */}
           {unreadTotal > 0 && (
             <span className="text-xs text-white px-1.5 py-0.5 rounded-full font-bold"
@@ -214,7 +214,7 @@ export default function ConversationList({
         className="flex items-center space-x-2 sm:space-x-3 px-3 sm:px-4 py-2 sm:py-3 border-b transition-colors hover:opacity-90"
         style={{ borderColor: 'var(--border)', background: 'var(--brand-primary)' }}
       >
-        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
           <Plus size={16} className="text-white sm:block" />
         </div>
         <div className="flex-1 text-left hidden sm:block">
@@ -304,7 +304,7 @@ export default function ConversationList({
                 onMouseLeave={(e) => { if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
               >
                 {/* Avatar */}
-                <div className="relative flex-shrink-0">
+                <div className="relative shrink-0">
                   {avatar ? (
                     <Image src={avatar} alt={name} width={48} height={48} className="rounded-full object-cover w-10 h-10 sm:w-12 sm:h-12" />
                   ) : (
@@ -323,18 +323,18 @@ export default function ConversationList({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-0.5 gap-1">
                     <h3 className="text-xs sm:text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{name}</h3>
-                    <span className="text-xs flex-shrink-0" style={{ color: unread > 0 ? 'var(--brand-accent)' : 'var(--text-muted)' }}>
+                    <span className="text-xs shrink-0" style={{ color: unread > 0 ? 'var(--brand-accent)' : 'var(--text-muted)' }}>
                       {lastTime}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-1">
                     <p className="text-xs truncate flex items-center space-x-1 flex-1 min-w-0" style={{ color: 'var(--text-secondary)' }}>
                       {conv.messages?.[0]?.sender?.id === currentUserId && (
-                        <CheckCheck size={12} className="flex-shrink-0" style={{ color: 'var(--brand-accent)' }} />
+                        <CheckCheck size={12} className="shrink-0" style={{ color: 'var(--brand-accent)' }} />
                       )}
                       {conv.messages?.[0]?.image && !conv.messages[0].content ? (
                         <span className="flex items-center space-x-1 truncate">
-                          <ImageIcon size={12} className="flex-shrink-0" />
+                          <ImageIcon size={12} className="shrink-0" />
                           <span className="hidden sm:inline">Photo</span>
                         </span>
                       ) : (
@@ -342,7 +342,7 @@ export default function ConversationList({
                       )}
                     </p>
                     {unread > 0 && (
-                      <span className="text-xs text-white rounded-full px-1.5 py-0.5 font-semibold flex-shrink-0"
+                      <span className="text-xs text-white rounded-full px-1.5 py-0.5 font-semibold shrink-0"
                         style={{ background: 'var(--brand-accent)', minWidth: 20, textAlign: 'center' }}>
                         {unread > 99 ? '99+' : unread}
                       </span>

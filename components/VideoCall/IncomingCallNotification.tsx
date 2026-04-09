@@ -37,7 +37,7 @@ export default function IncomingCallNotification() {
   if (status !== 'incoming') return null
 
   const handleAccept = async () => {
-    // Update database if this came from polling
+    // Update database
     if (dbCallId) {
       fetch(`/api/video-calls/${dbCallId}`, {
         method: 'PATCH',
@@ -45,9 +45,13 @@ export default function IncomingCallNotification() {
         body: JSON.stringify({ status: 'accepted', startedAt: new Date() }),
       }).catch(err => console.error('[IncomingCallNotification] Error accepting call:', err))
     }
-    if (!socket || !remoteUserId) return
-    socket.emit('call:accept', { callId, callerId: remoteUserId, conversationId })
-    socket.emit('call:join', callId)
+    
+    // Emit via Socket.IO for realtime notification
+    if (socket && remoteUserId) {
+      socket.emit('call:accept', { callId, callerId: remoteUserId, conversationId })
+    }
+    
+    // Set local state to active
     setCall({ status: 'active', startedAt: new Date() })
   }
 

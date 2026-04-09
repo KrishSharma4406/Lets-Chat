@@ -23,6 +23,7 @@ export default function VideoCallWindow() {
   const [duration, setDuration] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const statusPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const processedSignalsRef = useRef<Set<string>>(new Set())
 
   const isActive = status === 'active'
@@ -32,10 +33,21 @@ export default function VideoCallWindow() {
   const startLocalStream = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: isVideo, audio: true,
+        video: isVideo ? { width: { ideal: 1280 }, height: { ideal: 720 } } : false,
+        audio: true,
       })
+      
+      // Ensure all tracks are enabled
+      stream.getTracks().forEach(track => {
+        track.enabled = true
+      })
+      
       localStreamRef.current = stream
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream
+        // Ensure autoplay works
+        localVideoRef.current.play().catch(err => console.debug('Autoplay error:', err))
+      }
       return stream
     } catch {
       toast.error('Could not access camera/microphone')
@@ -50,10 +62,14 @@ export default function VideoCallWindow() {
       initiator,
       stream,
       trickle: true,
+      iceTransportPolicy: 'all',
       config: {
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' },
+          { urls: 'stun:stun3.l.google.com:19302' },
+          { urls: 'stun:stun4.l.google.com:19302' },
         ],
       },
     })
@@ -71,9 +87,17 @@ export default function VideoCallWindow() {
     })
 
     peer.on('stream', (remoteStream) => {
-      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream
-      setCall({ status: 'active', startedAt: new Date() })
-      timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000)
+      console.log('[VideoCallWindow] Remote stream received:', remoteStream.getTracks().length, 'tracks')
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStream
+        // Ensure autoplay works
+        remoteVideoRef.current.play().catch(err => console.debug('Remote playback error:', err))
+      }
+      
+      // Ensure timer is started when stream is received
+      if (!timerRef.current && status === 'active') {
+        timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000)
+      }
     })
 
     peer.on('error', (err) => {
@@ -83,7 +107,7 @@ export default function VideoCallWindow() {
     })
 
     peerRef.current = peer
-  }, [callId, setCall])
+  }, [callId, status])
 
   /** Handle call initiation (outgoing) */
   useEffect(() => {
@@ -95,6 +119,52 @@ export default function VideoCallWindow() {
     })
     return () => { mounted = false }
   }, [status]) // eslint-disable-line
+
+  /** Start timer when call becomes active */
+  useEffect(() => {
+    if (status !== 'active') return
+    
+    // Start timer if not already running
+    if (!timerRef.current) {
+      timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000)
+    }
+    
+    return () => {
+      // Don't clear timer here, let it continue
+    }
+  }, [status])
+
+  /** Poll call status to detect when other user ends call */
+  useEffect(() => {
+    if (status !== 'active' || !callId) return
+
+    const pollCallStatus = async () => {
+      try {
+        const res = await fetch(`/api/video-calls/${callId}`)
+        if (!res.ok) return
+        
+        const call = await res.json()
+        
+        // If call status changed to ended by other user, clean up
+        if (call.status === 'ended' || call.status === 'rejected') {
+          console.log('[VideoCallWindow] Call ended by other user, cleaning up')
+          cleanUp()
+        }
+      } catch (err) {
+        console.debug('Status poll error:', err)
+      }
+    }
+
+    // Poll every 1 second for call status changes
+    statusPollRef.current = setInterval(pollCallStatus, 1000)
+    
+    // Check immediately
+    pollCallStatus()
+
+    return () => {
+      if (statusPollRef.current) clearInterval(statusPollRef.current)
+    }
+  }, [callId, status])
 
   /** WebRTC signaling handlers - poll database instead of Socket.IO */
   useEffect(() => {
@@ -146,6 +216,7 @@ export default function VideoCallWindow() {
     localStreamRef.current = null
     if (timerRef.current) clearInterval(timerRef.current)
     if (pollTimerRef.current) clearInterval(pollTimerRef.current)
+    if (statusPollRef.current) clearInterval(statusPollRef.current)
     processedSignalsRef.current.clear()
     resetCall()
   }, [resetCall])
@@ -163,14 +234,22 @@ export default function VideoCallWindow() {
   }, [callId, duration, cleanUp])
 
   const handleMuteToggle = useCallback(() => {
+    const newMutedState = !isAudioMuted
     toggleMute()
-    localStreamRef.current?.getAudioTracks().forEach((t) => { t.enabled = !t.enabled })
-  }, [toggleMute])
+    const audioTracks = localStreamRef.current?.getAudioTracks() || []
+    audioTracks.forEach((t) => {
+      t.enabled = !newMutedState
+    })
+  }, [isAudioMuted, toggleMute])
 
   const handleVideoToggle = useCallback(() => {
+    const newVideoOffState = !isVideoOff
     toggleVideo()
-    localStreamRef.current?.getVideoTracks().forEach((t) => { t.enabled = !t.enabled })
-  }, [toggleVideo])
+    const videoTracks = localStreamRef.current?.getVideoTracks() || []
+    videoTracks.forEach((t) => {
+      t.enabled = !newVideoOffState
+    })
+  }, [isVideoOff, toggleVideo])
 
   const formatDuration = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
@@ -183,7 +262,14 @@ export default function VideoCallWindow() {
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#0B0B0B' }}>
       {/* Remote video / avatar */}
       <div className="flex-1 relative flex items-center justify-center">
-        <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" style={{ display: isActive ? 'block' : 'none' }} />
+        <video 
+          ref={remoteVideoRef} 
+          autoPlay 
+          playsInline 
+          controls={false}
+          className="w-full h-full object-cover" 
+          style={{ display: isActive ? 'block' : 'none' }} 
+        />
 
         {/* Avatar placeholder when call not yet connected */}
         {!isActive && (
@@ -209,7 +295,14 @@ export default function VideoCallWindow() {
         {isVideo && (
           <div className="absolute bottom-4 right-4 w-28 h-40 rounded-2xl overflow-hidden border-2 shadow-lg"
             style={{ borderColor: 'var(--brand-accent)' }}>
-            <video ref={localVideoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+            <video 
+              ref={localVideoRef} 
+              autoPlay 
+              muted 
+              playsInline 
+              controls={false}
+              className="w-full h-full object-cover" 
+            />
           </div>
         )}
       </div>

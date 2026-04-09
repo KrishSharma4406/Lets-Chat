@@ -182,9 +182,25 @@ model VideoCall {
   
   caller      User     @relation("caller", fields: [callerId], references: [id])
   recipient   User     @relation("recipient", fields: [recipientId], references: [id])
+  signals     WebRTCSignal[]
   
   @@index([recipientId])
   @@index([callerId])
+}
+
+model WebRTCSignal {
+  id        String   @id @default(cuid())
+  callId    String
+  fromUserId String
+  type      String   // 'offer' | 'answer' | 'candidate'
+  data      String   // JSON stringified signal data
+  createdAt DateTime @default(now())
+  
+  videoCall VideoCall @relation(fields: [callId], references: [id], onDelete: Cascade)
+  
+  @@index([callId])
+  @@index([fromUserId])
+  @@index([createdAt])
 }
 
 model MessageReaction {
