@@ -100,6 +100,13 @@ export default function VideoCallWindow() {
       }
     })
 
+    peer.on('connect', () => {
+      console.log('[VideoCallWindow] Peer connection established')
+      // Update status to active for both caller and callee
+      // This ensures timer starts and video is shown
+      setCall({ status: 'active' })
+    })
+
     peer.on('error', (err) => {
       console.error('Peer error:', err)
       toast.error('Call connection failed')
