@@ -6,7 +6,7 @@
     "dev": "next dev",
     "server": "ts-node --project tsconfig.server.json server.ts",
     "dev:all": "concurrently \"npm run dev\" \"npm run server\"",
-    "build": "prisma generate && prisma db push --skip-interactive && next build",
+    "build": "prisma generate && prisma db push --skip-generate && next build",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "prisma generate",
