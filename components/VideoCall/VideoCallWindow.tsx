@@ -62,8 +62,8 @@ export default function VideoCallWindow() {
       initiator,
       stream,
       trickle: true,
-      iceTransportPolicy: 'all',
       config: {
+        iceTransportPolicy: 'all',
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
