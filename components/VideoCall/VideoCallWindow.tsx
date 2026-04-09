@@ -39,7 +39,11 @@ export default function VideoCallWindow() {
           height: { ideal: 720 },
           facingMode: 'user' // Front camera on mobile
         } : false,
-        audio: true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
       })
       
       // Ensure all tracks are enabled
@@ -119,18 +123,19 @@ export default function VideoCallWindow() {
     })
 
     peerRef.current = peer
-  }, [callId, status])
+  }, [callId, setCall, handleEndCall])
 
-  /** Handle call initiation (outgoing) */
+  /** Handle call initiation (outgoing) and incoming acceptance */
   useEffect(() => {
-    if (status !== 'calling') return
+    if (status !== 'calling' && status !== 'incoming') return
     let mounted = true
     startLocalStream().then((stream) => {
       if (!stream || !mounted) return
-      createPeer(stream, true) // initiator
+      const isInitiator = status === 'calling'
+      createPeer(stream, isInitiator)
     })
     return () => { mounted = false }
-  }, [status]) // eslint-disable-line
+  }, [status, startLocalStream, createPeer]) // eslint-disable-line
 
   /** Start timer when call becomes active */
   useEffect(() => {
@@ -246,38 +251,46 @@ export default function VideoCallWindow() {
   }, [callId, duration, cleanUp])
 
   const handleMuteToggle = useCallback(() => {
+    // Calculate new muted state BEFORE toggling
+    const willBeMuted = !isAudioMuted
+    
+    // Update store
     toggleMute()
-    // After toggle, isAudioMuted will be flipped in store, so the audio should be opposite
+    
+    // Update audio tracks - if will be muted, disable; if will be unmuted, enable
     const audioTracks = localStreamRef.current?.getAudioTracks() || []
-    const shouldBeEnabled = isAudioMuted // if was muted, now should be enabled
     audioTracks.forEach((t) => {
-      t.enabled = shouldBeEnabled
+      t.enabled = !willBeMuted
     })
-    console.log('[handleMuteToggle] Audio tracks enabled:', shouldBeEnabled, 'count:', audioTracks.length)
+    console.log('[handleMuteToggle] Audio muted:', willBeMuted, 'tracks:', audioTracks.length)
   }, [isAudioMuted, toggleMute])
 
   const handleVideoToggle = useCallback(() => {
+    // Calculate new video state BEFORE toggling
+    const willBeOff = !isVideoOff
+    
+    // Update store
     toggleVideo()
-    // After toggle, isVideoOff will be flipped in store, so the video should be opposite
+    
+    // Update video tracks - if will be off, disable; if will be on, enable
     const videoTracks = localStreamRef.current?.getVideoTracks() || []
-    const shouldBeEnabled = isVideoOff // if was off, now should be enabled
     videoTracks.forEach((t) => {
-      t.enabled = shouldBeEnabled
+      t.enabled = !willBeOff
     })
-    console.log('[handleVideoToggle] Video tracks enabled:', shouldBeEnabled, 'count:', videoTracks.length)
+    console.log('[handleVideoToggle] Video off:', willBeOff, 'tracks:', videoTracks.length)
   }, [isVideoOff, toggleVideo])
 
-  const handleSpeakerToggle = useCallback(async () => {
-    try {
-      setSpeakerEnabled(!speakerEnabled)
-      // Toggle audio output (important for mobile where speaker/earpiece matters)
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.muted = !speakerEnabled
-      }
-      console.log('[handleSpeakerToggle] Speaker:', !speakerEnabled)
-    } catch (err) {
-      console.error('Speaker toggle error:', err)
+  const handleSpeakerToggle = useCallback(() => {
+    const newSpeakerState = !speakerEnabled
+    setSpeakerEnabled(newSpeakerState)
+    
+    // Control audio output volume
+    if (remoteVideoRef.current) {
+      // If speaker on, set to normal volume; if off, mute
+      remoteVideoRef.current.volume = newSpeakerState ? 1 : 0
+      remoteVideoRef.current.muted = !newSpeakerState
     }
+    console.log('[handleSpeakerToggle] Speaker enabled:', newSpeakerState)
   }, [speakerEnabled])
 
   const formatDuration = (s: number) =>
@@ -336,8 +349,11 @@ export default function VideoCallWindow() {
         )}
       </div>
 
-      {/* Controls bar */}
-      <div className="flex items-center justify-center space-x-6 pb-10 pt-6" style={{ background: 'rgba(0,0,0,0.7)' }}>
+      {/* Controls bar - with safe area support for mobile */}
+      <div className="flex items-center justify-center space-x-6 pb-6 pt-6" style={{ 
+        background: 'rgba(0,0,0,0.7)',
+        paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))'
+      }}>
         <CallBtn icon={isAudioMuted ? <MicOff size={22} /> : <Mic size={22} />}
           label={isAudioMuted ? 'Unmute' : 'Mute'}
           onClick={handleMuteToggle}

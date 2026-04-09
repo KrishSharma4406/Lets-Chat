@@ -37,6 +37,10 @@ export default function IncomingCallNotification() {
   if (status !== 'incoming') return null
 
   const handleAccept = async () => {
+    // First set local state to 'incoming' so VideoCallWindow starts the local stream
+    // Status will become 'active' when peer connection is established
+    setCall({ status: 'incoming' })
+    
     // Update database
     if (dbCallId) {
       fetch(`/api/video-calls/${dbCallId}`, {
@@ -50,9 +54,6 @@ export default function IncomingCallNotification() {
     if (socket && remoteUserId) {
       socket.emit('call:accept', { callId, callerId: remoteUserId, conversationId })
     }
-    
-    // Set local state to active
-    setCall({ status: 'active', startedAt: new Date() })
   }
 
 
