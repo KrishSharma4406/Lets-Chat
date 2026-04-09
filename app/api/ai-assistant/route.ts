@@ -22,7 +22,7 @@ const getAIResponse = async (userMessage: string): Promise<string> => {
 
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: {
@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error: aiError instanceof Error ? aiError.message : 'Failed to generate AI response',
-          details: 'Please check your OpenAI API key and try again',
+          details: 'Please check your GOOGLE_GEMINI_API_KEY environment variable and ensure you have credits',
         },
         { status: 503 }
       )

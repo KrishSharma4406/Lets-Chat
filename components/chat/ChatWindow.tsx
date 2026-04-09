@@ -47,6 +47,7 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
   const [aiMessages, setAiMessages] = useState<Message[]>([])
   const [aiLoading, setAiLoading] = useState(false)
   const [isAiAssistant, setIsAiAssistant] = useState(false)
+  const [aiIsTyping, setAiIsTyping] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const firstLoadRef = useRef(true)
@@ -54,7 +55,7 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
   // Infinite scroll sentinel at top
   const { ref: topRef, inView: topInView } = useInView({ threshold: 0 })
 
-  /* ── Fetch conversation details ───────────────────────── */
+  /* ── Fetch conversation details ── */
   useEffect(() => {
     if (!conversationId) return
 
@@ -199,12 +200,16 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
       setAiMessages(prev => [...prev, userMessage])
 
       try {
+        setAiIsTyping(true)
         const res = await fetch('/api/ai-assistant', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: content }),
         })
-        if (!res.ok) throw new Error('Failed to send')
+        if (!res.ok) {
+          const errorData = await res.json()
+          throw new Error(errorData.error || errorData.details || 'Failed to send message')
+        }
         const data = await res.json()
 
         // Add the actual user message and AI response
@@ -231,8 +236,12 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
           ]
         })
       } catch (err) {
-        toast.error('Failed to send message')
+        const errorMsg = err instanceof Error ? err.message : 'Failed to send message'
+        console.error('[ChatWindow] AI Assistant error:', err)
+        toast.error(errorMsg)
         setAiMessages(prev => prev.filter(m => m.id !== tempId))
+      } finally {
+        setAiIsTyping(false)
       }
       return
     }
@@ -511,7 +520,7 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
         })}
 
         {/* Typing indicator */}
-        {typingUsers.length > 0 && (
+        {(typingUsers.length > 0 || (isAiAssistant && aiIsTyping)) && (
           <div className="flex items-end space-x-2 pb-1">
             <div className="px-4 py-3 rounded-2xl rounded-bl-sm shadow-msg"
               style={{ background: 'var(--bg-bubble-in)', border: '1px solid var(--border)' }}>
@@ -520,7 +529,7 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
               </div>
             </div>
             <span className="text-xs pb-1" style={{ color: 'var(--text-muted)' }}>
-              {typingUsers.slice(0, 2).join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing…
+              {isAiAssistant && aiIsTyping ? 'Assistant is typing…' : `${typingUsers.slice(0, 2).join(', ')} ${typingUsers.length === 1 ? 'is' : 'are'} typing…`}
             </span>
           </div>
         )}
