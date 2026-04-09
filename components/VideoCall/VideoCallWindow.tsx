@@ -21,6 +21,7 @@ export default function VideoCallWindow() {
   const peerRef = useRef<SimplePeer.Instance | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
   const [duration, setDuration] = useState(0)
+  const [speakerEnabled, setSpeakerEnabled] = useState(true)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const statusPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -33,7 +34,11 @@ export default function VideoCallWindow() {
   const startLocalStream = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: isVideo ? { width: { ideal: 1280 }, height: { ideal: 720 } } : false,
+        video: isVideo ? { 
+          width: { ideal: 1280 }, 
+          height: { ideal: 720 },
+          facingMode: 'user' // Front camera on mobile
+        } : false,
         audio: true,
       })
       
@@ -241,22 +246,39 @@ export default function VideoCallWindow() {
   }, [callId, duration, cleanUp])
 
   const handleMuteToggle = useCallback(() => {
-    const newMutedState = !isAudioMuted
     toggleMute()
+    // After toggle, isAudioMuted will be flipped in store, so the audio should be opposite
     const audioTracks = localStreamRef.current?.getAudioTracks() || []
+    const shouldBeEnabled = isAudioMuted // if was muted, now should be enabled
     audioTracks.forEach((t) => {
-      t.enabled = !newMutedState
+      t.enabled = shouldBeEnabled
     })
+    console.log('[handleMuteToggle] Audio tracks enabled:', shouldBeEnabled, 'count:', audioTracks.length)
   }, [isAudioMuted, toggleMute])
 
   const handleVideoToggle = useCallback(() => {
-    const newVideoOffState = !isVideoOff
     toggleVideo()
+    // After toggle, isVideoOff will be flipped in store, so the video should be opposite
     const videoTracks = localStreamRef.current?.getVideoTracks() || []
+    const shouldBeEnabled = isVideoOff // if was off, now should be enabled
     videoTracks.forEach((t) => {
-      t.enabled = !newVideoOffState
+      t.enabled = shouldBeEnabled
     })
+    console.log('[handleVideoToggle] Video tracks enabled:', shouldBeEnabled, 'count:', videoTracks.length)
   }, [isVideoOff, toggleVideo])
+
+  const handleSpeakerToggle = useCallback(async () => {
+    try {
+      setSpeakerEnabled(!speakerEnabled)
+      // Toggle audio output (important for mobile where speaker/earpiece matters)
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.muted = !speakerEnabled
+      }
+      console.log('[handleSpeakerToggle] Speaker:', !speakerEnabled)
+    } catch (err) {
+      console.error('Speaker toggle error:', err)
+    }
+  }, [speakerEnabled])
 
   const formatDuration = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
@@ -274,8 +296,8 @@ export default function VideoCallWindow() {
           autoPlay 
           playsInline 
           controls={false}
-          className="w-full h-full object-cover" 
-          style={{ display: isActive ? 'block' : 'none' }} 
+          className="w-full h-full object-contain" 
+          style={{ display: isActive ? 'block' : 'none', background: '#000' }} 
         />
 
         {/* Avatar placeholder when call not yet connected */}
@@ -328,7 +350,11 @@ export default function VideoCallWindow() {
             active={isVideoOff}
           />
         )}
-        <CallBtn icon={<Volume2 size={22} />} label="Speaker" onClick={() => { }} />
+        <CallBtn icon={<Volume2 size={22} />} 
+          label={speakerEnabled ? 'Speaker' : 'Muted'} 
+          onClick={handleSpeakerToggle}
+          active={!speakerEnabled}
+        />
         {/* End call */}
         <button onClick={handleEndCall}
           className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95"
