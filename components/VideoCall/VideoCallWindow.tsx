@@ -65,6 +65,30 @@ export default function VideoCallWindow() {
     }
   }, [isVideo, resetCall])
 
+  const cleanUp = useCallback(() => {
+    peerRef.current?.destroy()
+    peerRef.current = null
+    localStreamRef.current?.getTracks().forEach((t) => t.stop())
+    localStreamRef.current = null
+    if (timerRef.current) clearInterval(timerRef.current)
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current)
+    if (statusPollRef.current) clearInterval(statusPollRef.current)
+    processedSignalsRef.current.clear()
+    resetCall()
+  }, [resetCall])
+
+  const handleEndCall = useCallback(() => {
+    // Notify other user via database update if needed
+    if (callId) {
+      fetch(`/api/video-calls/${callId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'ended', endedAt: new Date(), duration }),
+      }).catch(err => console.debug('End call update error:', err))
+    }
+    cleanUp()
+  }, [callId, duration, cleanUp])
+
   /** Create WebRTC peer (initiator = caller) */
   const createPeer = useCallback((stream: MediaStream, initiator: boolean) => {
     const peer = new SimplePeer({
@@ -225,30 +249,6 @@ export default function VideoCallWindow() {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current)
     }
   }, [callId, status, startLocalStream, createPeer]) // eslint-disable-line
-
-  const cleanUp = useCallback(() => {
-    peerRef.current?.destroy()
-    peerRef.current = null
-    localStreamRef.current?.getTracks().forEach((t) => t.stop())
-    localStreamRef.current = null
-    if (timerRef.current) clearInterval(timerRef.current)
-    if (pollTimerRef.current) clearInterval(pollTimerRef.current)
-    if (statusPollRef.current) clearInterval(statusPollRef.current)
-    processedSignalsRef.current.clear()
-    resetCall()
-  }, [resetCall])
-
-  const handleEndCall = useCallback(() => {
-    // Notify other user via database update if needed
-    if (callId) {
-      fetch(`/api/video-calls/${callId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'ended', endedAt: new Date(), duration }),
-      }).catch(err => console.debug('End call update error:', err))
-    }
-    cleanUp()
-  }, [callId, duration, cleanUp])
 
   const handleMuteToggle = useCallback(() => {
     // Calculate new muted state BEFORE toggling
