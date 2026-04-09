@@ -92,7 +92,8 @@ export default function MessageBubble({
                             alt={message.fileName || 'image'}
                             width={260}
                             height={200}
-                            className="rounded-lg object-cover cursor-pointer max-w-xs"
+                            className="rounded-lg object-cover cursor-pointer w-full max-w-xs"
+                            style={{ maxWidth: 'min(280px, 100vw - 80px)' }}
                             onClick={() => window.open(message.image!, '_blank')}
                         />
                     </div>
@@ -100,7 +101,7 @@ export default function MessageBubble({
 
                 {/* Video */}
                 {hasVideo && (
-                    <video controls className="rounded-lg max-w-xs mb-1" style={{ maxHeight: 200 }}>
+                    <video controls className="rounded-lg w-full max-w-xs mb-1" style={{ maxHeight: 200, maxWidth: 'min(280px, 100vw - 80px)' }}>
                         <source src={message.image!} type={message.fileType || 'video/mp4'} />
                     </video>
                 )}
@@ -108,14 +109,14 @@ export default function MessageBubble({
                 {/* File */}
                 {hasFile && (
                     <a href={message.image!} download={message.fileName || 'file'}
-                        className="flex items-center space-x-2 px-3 py-2 rounded-lg mb-1 transition-opacity hover:opacity-80"
+                        className="flex items-center space-x-2 px-2 sm:px-3 py-2 rounded-lg mb-1 transition-opacity hover:opacity-80 w-full max-w-xs"
                         style={{ background: isOwn ? 'rgba(255,255,255,0.15)' : 'var(--bg-input)' }}>
                         <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
                             style={{ background: isOwn ? 'rgba(255,255,255,0.2)' : 'var(--brand-accent)' }}>
-                            <span className="text-xs font-bold text-white">{(message.fileName?.split('.').pop() || 'FILE').toUpperCase()}</span>
+                            <span className="text-xs font-bold text-white">{(message.fileName?.split('.').pop() || 'FILE').toUpperCase().slice(0, 3)}</span>
                         </div>
-                        <div className="min-w-0">
-                            <p className="text-xs font-medium truncate" style={{ color: isOwn ? 'white' : 'var(--text-primary)', maxWidth: 180 }}>{message.fileName}</p>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium truncate" style={{ color: isOwn ? 'white' : 'var(--text-primary)' }}>{message.fileName}</p>
                             <p className="text-xs" style={{ color: isOwn ? 'rgba(255,255,255,0.6)' : 'var(--text-muted)' }}>Tap to download</p>
                         </div>
                     </a>
@@ -123,7 +124,7 @@ export default function MessageBubble({
 
                 {/* Text */}
                 {message.content && (
-                    <p className="text-sm wrap-break-word leading-relaxed" style={{ color: isOwn ? 'white' : 'var(--text-primary)' }}>
+                    <p className="text-xs sm:text-sm wrap-break-word leading-relaxed" style={{ color: isOwn ? 'white' : 'var(--text-primary)' }}>
                         {message.content}
                     </p>
                 )}
@@ -153,7 +154,7 @@ export default function MessageBubble({
             )}
             {!isOwn && isGroup && !showAvatar && <div className="w-8 flex-shrink-0" />}
 
-            <div className={`relative flex flex-col ${isOwn ? 'items-end' : 'items-start'}`} style={{ maxWidth: '75%' }}>
+            <div className={`relative flex flex-col ${isOwn ? 'items-end' : 'items-start'}`} style={{ maxWidth: 'min(75%, 100vw - 80px)' }}>
                 {/* Sender name for groups */}
                 {!isOwn && isGroup && showAvatar && (
                     <p className="text-xs font-semibold mb-1 ml-1" style={{ color: 'var(--brand-secondary)' }}>
@@ -164,7 +165,7 @@ export default function MessageBubble({
                 <div className="relative">
                     {/* Bubble */}
                     <div
-                        className={`relative px-3 py-2 rounded-xl shadow-msg ${isOwn ? 'bubble-out' : 'bubble-in'}`}
+                        className={`relative px-2 sm:px-3 py-2 rounded-xl shadow-msg ${isOwn ? 'bubble-out' : 'bubble-in'}`}
                         style={{
                             background: isOwn ? 'var(--bg-bubble-out)' : 'var(--bg-bubble-in)',
                             borderRadius: isOwn ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
@@ -177,7 +178,7 @@ export default function MessageBubble({
                     {/* Hover action bar */}
                     {!isDeleted && (
                         <div
-                            className={`absolute top-0 flex items-center bg-opacity-90 rounded-full shadow px-1 py-0.5 space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 ${isOwn ? '-left-28' : '-right-28'}`}
+                            className={`absolute top-0 hidden sm:flex items-center bg-opacity-90 rounded-full shadow px-1 py-0.5 space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 ${isOwn ? '-left-28' : '-right-28'}`}
                             style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', transform: isOwn ? 'translateY(-50%)' : 'translateY(-50%)' }}
                         >
                             <button onClick={() => setEmojiOpen(!emojiOpen)} className="p-1.5 rounded-full transition-colors hover:opacity-70" style={{ color: 'var(--text-secondary)' }}>

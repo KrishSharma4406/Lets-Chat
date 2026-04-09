@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 /**
  * ChatWindow — full-featured real-time chat window:
@@ -397,24 +398,24 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center space-x-3 px-4 py-3 z-10 shadow-sm"
+      <div className="flex items-center space-x-2 sm:space-x-3 px-3 sm:px-4 py-3 z-10 shadow-sm"
         style={{ background: 'var(--brand-primary)', color: 'white' }}>
         {onBack && (
-          <button onClick={onBack} className="mr-1 p-1 rounded-full hover:opacity-70 transition-opacity">
+          <button onClick={onBack} className="mr-1 p-1 rounded-full hover:opacity-70 transition-opacity flex-shrink-0">
             <ArrowLeft size={20} className="text-white" />
           </button>
         )}
 
         {/* Avatar */}
-        <div className="relative">
+        <div className="relative flex-shrink-0">
           {isAiAssistant ? (
-            <Image src="/ai-assistant.png" alt="AI Assistant" width={40} height={40} className="rounded-full object-cover" />
+            <Image src="/ai-assistant.png" alt="AI Assistant" width={40} height={40} className="rounded-full object-cover w-10 h-10" />
           ) : conv?.isGroup ? (
             <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.2)' }}>
               <Users size={20} className="text-white" />
             </div>
           ) : otherUser?.image ? (
-            <Image src={otherUser.image} alt={headerName} width={40} height={40} className="rounded-full object-cover" />
+            <Image src={otherUser.image} alt={headerName} width={40} height={40} className="rounded-full object-cover w-10 h-10" />
           ) : (
             <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold" style={{ background: 'rgba(255,255,255,0.2)' }}>
               {headerName[0]?.toUpperCase()}
@@ -434,21 +435,21 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
         <div className="flex items-center space-x-1">
           {!conv?.isGroup && !isAiAssistant && (
             <>
-              <button onClick={() => handleCall(false)} className="p-2 rounded-full hover:bg-white/10 transition-colors">
-                <Phone size={20} className="text-white" />
+              <button onClick={() => handleCall(false)} className="p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0">
+                <Phone size={18} className="text-white" />
               </button>
-              <button onClick={() => handleCall(true)} className="p-2 rounded-full hover:bg-white/10 transition-colors">
-                <Video size={20} className="text-white" />
+              <button onClick={() => handleCall(true)} className="p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0">
+                <Video size={18} className="text-white" />
               </button>
             </>
           )}
           {!isAiAssistant && (
             <>
-              <button className="p-2 rounded-full hover:bg-white/10 transition-colors">
-                <Search size={20} className="text-white" />
+              <button className="p-2 rounded-full hover:bg-white/10 transition-colors hidden sm:block flex-shrink-0">
+                <Search size={18} className="text-white" />
               </button>
-              <button className="p-2 rounded-full hover:bg-white/10 transition-colors">
-                <MoreVertical size={20} className="text-white" />
+              <button className="p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0">
+                <MoreVertical size={18} className="text-white" />
               </button>
             </>
           )}
@@ -456,7 +457,7 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
       </div>
 
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1 chat-bg">
+      <div className="flex-1 overflow-y-auto px-2 sm:px-4 py-2 sm:py-3 space-y-1 chat-bg">
         {/* Top sentinel for infinite scroll */}
         <div ref={topRef} className="h-1" />
 

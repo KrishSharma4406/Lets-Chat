@@ -260,10 +260,10 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="h-screen flex overflow-hidden relative" style={{ background: 'var(--bg-base)' }}>
+    <div className="h-screen w-screen flex overflow-hidden relative" style={{ background: 'var(--bg-base)' }}>
       {/* Sidebar — hidden on mobile when chat is selected */}
       <div
-        className={`w-full md:w-95 lg:w-105 shrink-0 flex flex-col h-full border-r transition-all duration-300 ${!mobileSidebarOpen && selectedConversation ? 'hidden md:flex' : 'flex'
+        className={`w-full sm:w-80 md:w-95 lg:w-105 shrink-0 flex flex-col h-full border-r transition-all duration-300 ${!mobileSidebarOpen && selectedConversation ? 'hidden sm:flex' : 'flex'
           }`}
         style={{ borderColor: 'var(--border)' }}
       >
@@ -276,7 +276,7 @@ export default function ChatPage() {
       </div>
 
       {/* Main chat area */}
-      <div className={`flex-1 flex flex-col min-w-0 ${mobileSidebarOpen && !selectedConversation ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`flex-1 flex flex-col min-w-0 ${mobileSidebarOpen && !selectedConversation ? 'hidden sm:flex' : 'flex'}`}>
         {selectedConversation ? (
           <ChatWindow
             conversationId={selectedConversation}

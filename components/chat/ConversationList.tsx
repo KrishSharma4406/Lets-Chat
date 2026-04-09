@@ -134,11 +134,11 @@ export default function ConversationList({
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--bg-sidebar)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}>
-        <div className="flex items-center space-x-3">
-          <div className="relative cursor-pointer" onClick={() => window.location.href = '/settings'}>
+      <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}>
+        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+          <div className="relative cursor-pointer flex-shrink-0" onClick={() => window.location.href = '/settings'}>
             {session?.user?.image ? (
-              <Image src={session.user.image} alt="avatar" width={40} height={40} className="rounded-full object-cover" />
+              <Image src={session.user.image} alt="avatar" width={40} height={40} className="rounded-full object-cover w-10 h-10" />
             ) : (
               <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm"
                 style={{ background: 'var(--brand-secondary)' }}>
@@ -146,30 +146,30 @@ export default function ConversationList({
               </div>
             )}
           </div>
-          <div>
-            <p className="text-sm font-semibold line-clamp-1" style={{ color: 'var(--text-primary)' }}>
+          <div className="min-w-0">
+            <p className="text-xs sm:text-sm font-semibold line-clamp-1" style={{ color: 'var(--text-primary)' }}>
               {session?.user?.name || 'Me'}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-1">
+        <div className="flex items-center space-x-0.5 sm:space-x-1 flex-shrink-0">
           {/* Unread badge */}
           {unreadTotal > 0 && (
-            <span className="text-xs text-white px-1.5 py-0.5 rounded-full font-bold mr-1"
+            <span className="text-xs text-white px-1.5 py-0.5 rounded-full font-bold"
               style={{ background: 'var(--brand-accent)' }}>
               {unreadTotal}
             </span>
           )}
           <button onClick={toggleTheme} className="p-2 rounded-full transition-colors hover:opacity-70" style={{ color: 'var(--text-secondary)' }}>
-            {isDark ? <Sun size={20} /> : <Moon size={20} />}
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           <button onClick={onNewChat} className="p-2 rounded-full transition-colors hover:opacity-70" style={{ color: 'var(--text-secondary)' }}>
-            <MessageCircle size={20} />
+            <MessageCircle size={18} />
           </button>
           <div className="relative" ref={menuRef}>
             <button onClick={() => setShowMenu(!showMenu)} className="p-2 rounded-full transition-colors hover:opacity-70" style={{ color: 'var(--text-secondary)' }}>
-              <MoreVertical size={20} />
+              <MoreVertical size={18} />
             </button>
             {showMenu && (
               <div className="absolute right-0 top-10 z-50 rounded-xl shadow-lg py-1 min-w-48 animate-fade-in"
@@ -181,7 +181,7 @@ export default function ConversationList({
                   { icon: <LogOut size={16} />, label: 'Log out', action: () => signOut({ callbackUrl: '/chat' }), danger: true },
                 ].map((item) => (
                   <button key={item.label} onClick={item.action}
-                    className="flex items-center space-x-3 w-full px-4 py-2.5 text-sm transition-colors hover:opacity-80"
+                    className="flex items-center space-x-3 w-full px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm transition-colors hover:opacity-80"
                     style={{ color: item.danger ? '#EF4444' : 'var(--text-primary)' }}>
                     <span style={{ color: item.danger ? '#EF4444' : 'var(--text-secondary)' }}>{item.icon}</span>
                     <span>{item.label}</span>
@@ -194,15 +194,15 @@ export default function ConversationList({
       </div>
 
       {/* Search */}
-      <div className="px-3 py-2.5 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-sidebar)' }}>
-        <div className="flex items-center rounded-xl px-3 py-2 space-x-2" style={{ background: 'var(--bg-input)' }}>
-          <Search size={16} style={{ color: 'var(--text-muted)' }} />
+      <div className="px-2 sm:px-3 py-2 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-sidebar)' }}>
+        <div className="flex items-center rounded-xl px-2 sm:px-3 py-2 space-x-2" style={{ background: 'var(--bg-input)' }}>
+          <Search size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           <input
             type="text"
-            placeholder="Search or start new chat"
+            placeholder="Search..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 text-sm bg-transparent outline-none placeholder:text-sm"
+            className="flex-1 text-xs sm:text-sm bg-transparent outline-none placeholder:text-xs sm:placeholder:text-sm"
             style={{ color: 'var(--text-primary)' }}
           />
         </div>
@@ -211,17 +211,17 @@ export default function ConversationList({
       {/* New group quick button */}
       <button
         onClick={() => setShowGroupModal(true)}
-        className="flex items-center space-x-3 px-4 py-3 border-b transition-colors hover:opacity-90"
+        className="flex items-center space-x-2 sm:space-x-3 px-3 sm:px-4 py-2 sm:py-3 border-b transition-colors hover:opacity-90"
         style={{ borderColor: 'var(--border)', background: 'var(--brand-primary)' }}
       >
-        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-          <Plus size={20} className="text-white" />
+        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+          <Plus size={16} className="text-white sm:block" />
         </div>
-        <div className="flex-1 text-left">
-          <p className="text-sm font-medium text-white">New group</p>
+        <div className="flex-1 text-left hidden sm:block">
+          <p className="text-xs sm:text-sm font-medium text-white">New group</p>
           <p className="text-xs text-white/70">Create a group chat</p>
         </div>
-        <Users size={16} className="text-white/70" />
+        <Users size={14} className="text-white/70 hidden sm:block" />
       </button>
 
       {/* Conversation list */}
@@ -295,7 +295,7 @@ export default function ConversationList({
               <div
                 key={conv.id}
                 onClick={() => onSelectConversation(conv.id)}
-                className="flex items-center space-x-3 px-4 py-3 cursor-pointer transition-colors border-b"
+                className="flex items-center space-x-2 sm:space-x-3 px-2 sm:px-4 py-2 sm:py-3 cursor-pointer transition-colors border-b"
                 style={{
                   borderColor: 'var(--border-subtle)',
                   background: isSelected ? 'var(--bg-elevated)' : 'transparent',
@@ -304,45 +304,45 @@ export default function ConversationList({
                 onMouseLeave={(e) => { if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
               >
                 {/* Avatar */}
-                <div className="relative shrink-0">
+                <div className="relative flex-shrink-0">
                   {avatar ? (
-                    <Image src={avatar} alt={name} width={48} height={48} className="rounded-full object-cover" />
+                    <Image src={avatar} alt={name} width={48} height={48} className="rounded-full object-cover w-10 h-10 sm:w-12 sm:h-12" />
                   ) : (
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold"
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-semibold text-sm"
                       style={{ background: conv.isGroup ? 'var(--brand-primary)' : 'var(--brand-secondary)' }}>
-                      {conv.isGroup ? <Users size={20} /> : initials}
+                      {conv.isGroup ? <Users size={16} /> : initials}
                     </div>
                   )}
                   {online && (
-                    <div className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2"
+                    <div className="absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-2"
                       style={{ background: 'var(--online)', borderColor: 'var(--bg-sidebar)' }} />
                   )}
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <h3 className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{name}</h3>
-                    <span className="text-xs shrink-0 ml-1" style={{ color: unread > 0 ? 'var(--brand-accent)' : 'var(--text-muted)' }}>
+                  <div className="flex items-center justify-between mb-0.5 gap-1">
+                    <h3 className="text-xs sm:text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{name}</h3>
+                    <span className="text-xs flex-shrink-0" style={{ color: unread > 0 ? 'var(--brand-accent)' : 'var(--text-muted)' }}>
                       {lastTime}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs truncate flex items-center space-x-1 flex-1" style={{ color: 'var(--text-secondary)' }}>
+                  <div className="flex items-center justify-between gap-1">
+                    <p className="text-xs truncate flex items-center space-x-1 flex-1 min-w-0" style={{ color: 'var(--text-secondary)' }}>
                       {conv.messages?.[0]?.sender?.id === currentUserId && (
-                        <CheckCheck size={13} className="shrink-0" style={{ color: 'var(--brand-accent)' }} />
+                        <CheckCheck size={12} className="flex-shrink-0" style={{ color: 'var(--brand-accent)' }} />
                       )}
                       {conv.messages?.[0]?.image && !conv.messages[0].content ? (
-                        <span className="flex items-center space-x-1">
-                          <ImageIcon size={12} />
-                          <span>Photo</span>
+                        <span className="flex items-center space-x-1 truncate">
+                          <ImageIcon size={12} className="flex-shrink-0" />
+                          <span className="hidden sm:inline">Photo</span>
                         </span>
                       ) : (
                         <span className="truncate">{lastMsg}</span>
                       )}
                     </p>
                     {unread > 0 && (
-                      <span className="text-xs text-white rounded-full px-1.5 py-0.5 font-semibold ml-1 shrink-0"
+                      <span className="text-xs text-white rounded-full px-1.5 py-0.5 font-semibold flex-shrink-0"
                         style={{ background: 'var(--brand-accent)', minWidth: 20, textAlign: 'center' }}>
                         {unread > 99 ? '99+' : unread}
                       </span>
