@@ -14,7 +14,7 @@ export default function VideoCallWindow() {
 
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
-  const peerRef = useRef<SimplePeer | null>(null)
+  const peerRef = useRef<InstanceType<typeof SimplePeer> | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
   const durationRef = useRef(0)
   const [duration, setDuration] = useState(0)
