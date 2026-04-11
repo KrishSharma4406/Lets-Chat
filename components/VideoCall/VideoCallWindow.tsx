@@ -4,22 +4,19 @@
  * Uses simple-peer for WebRTC, Socket.IO for signaling
  */
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { Mic, MicOff, Video, VideoOff, PhoneOff, RotateCcw, Volume2 } from 'lucide-react'
+import { Mic, MicOff, Video, VideoOff, PhoneOff, Volume2 } from 'lucide-react'
 import SimplePeer from 'simple-peer'
 import { useCallStore } from '@/lib/stores/callStore'
-import { useSocketStore } from '@/lib/stores/socketStore'
-import { useSession } from 'next-auth/react'
-import toast from 'react-hot-toast'
+import { toast } from 'react-hot-toast'
 
 export default function VideoCallWindow() {
-  const { data: session } = useSession()
-  const { socket } = useSocketStore()
-  const { status, callId, remoteUserId, remoteUserName, remoteUserImage, isVideo, isAudioMuted, isVideoOff, toggleMute, toggleVideo, resetCall, setCall } = useCallStore()
+  const { status, callId, remoteUserName, isVideo, isAudioMuted, isVideoOff, toggleMute, toggleVideo, resetCall, setCall } = useCallStore()
 
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
-  const peerRef = useRef<SimplePeer.Instance | null>(null)
+  const peerRef = useRef<SimplePeer | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
+  const durationRef = useRef(0)
   const [duration, setDuration] = useState(0)
   const [speakerEnabled, setSpeakerEnabled] = useState(true)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -71,44 +68,50 @@ export default function VideoCallWindow() {
     localStreamRef.current?.getTracks().forEach((t) => t.stop())
     localStreamRef.current = null
     if (timerRef.current) clearInterval(timerRef.current)
+    timerRef.current = null
     if (pollTimerRef.current) clearInterval(pollTimerRef.current)
+    pollTimerRef.current = null
     if (statusPollRef.current) clearInterval(statusPollRef.current)
+    statusPollRef.current = null
+    durationRef.current = 0
+    setDuration(0)
     processedSignalsRef.current.clear()
     resetCall()
   }, [resetCall])
 
   const handleEndCall = useCallback(() => {
-    // Notify other user via database update if needed
+    // Notify other user via database update with current duration
     if (callId) {
       fetch(`/api/video-calls/${callId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'ended', endedAt: new Date(), duration }),
+        body: JSON.stringify({ status: 'ended', endedAt: new Date(), duration: durationRef.current }),
       }).catch(err => console.debug('End call update error:', err))
     }
     cleanUp()
-  }, [callId, duration, cleanUp])
+  }, [callId, cleanUp])
 
-  /** Create WebRTC peer (initiator = caller) */
   const createPeer = useCallback((stream: MediaStream, initiator: boolean) => {
+    if (peerRef.current) return // Already exists
+    
     const peer = new SimplePeer({
       initiator,
       stream,
       trickle: true,
       config: {
-        iceTransportPolicy: 'all',
         iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-          { urls: 'stun:stun2.l.google.com:19302' },
-          { urls: 'stun:stun3.l.google.com:19302' },
-          { urls: 'stun:stun4.l.google.com:19302' },
+          { urls: ['stun:stun.l.google.com:19302'] },
+          { urls: ['stun:stun1.l.google.com:19302'] },
+          { urls: ['stun:stun2.l.google.com:19302'] },
+          { urls: ['stun:stun3.l.google.com:19302'] },
+          { urls: ['stun:stun4.l.google.com:19302'] },
         ],
       },
-    })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
 
-    peer.on('signal', (data) => {
-      // Send signal via HTTP instead of Socket.IO (works on Vercel)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    peer.on('signal', (data: any) => {
       if (!callId) return
       
       // data.type is 'offer', 'answer', or 'candidate' from simple-peer
@@ -119,7 +122,7 @@ export default function VideoCallWindow() {
       }).catch(err => console.debug('Signal send error:', err))
     })
 
-    peer.on('stream', (remoteStream) => {
+    peer.on('stream', (remoteStream: MediaStream) => {
       console.log('[VideoCallWindow] Remote stream received:', remoteStream.getTracks().length, 'tracks')
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStream
@@ -129,7 +132,10 @@ export default function VideoCallWindow() {
       
       // Ensure timer is started when stream is received
       if (!timerRef.current && status === 'active') {
-        timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000)
+        timerRef.current = setInterval(() => {
+          durationRef.current += 1
+          setDuration((d) => d + 1)
+        }, 1000)
       }
     })
 
@@ -140,18 +146,21 @@ export default function VideoCallWindow() {
       setCall({ status: 'active' })
     })
 
-    peer.on('error', (err) => {
+    peer.on('error', (err: Error) => {
       console.error('Peer error:', err)
       toast.error('Call connection failed')
-      handleEndCall()
+      // Cleanup immediately without calling handleEndCall to avoid circular refs
+      cleanUp()
     })
 
     peerRef.current = peer
-  }, [callId, setCall, handleEndCall])
+  }, [callId, setCall, cleanUp, status])
 
   /** Handle call initiation (outgoing) and incoming acceptance */
   useEffect(() => {
     if (status !== 'calling' && status !== 'incoming') return
+    if (peerRef.current) return // Already initialized
+    
     let mounted = true
     startLocalStream().then((stream) => {
       if (!stream || !mounted) return
@@ -159,7 +168,7 @@ export default function VideoCallWindow() {
       createPeer(stream, isInitiator)
     })
     return () => { mounted = false }
-  }, [status, startLocalStream, createPeer]) // eslint-disable-line
+  }, [status, createPeer, startLocalStream])
 
   /** Start timer when call becomes active */
   useEffect(() => {
@@ -167,7 +176,10 @@ export default function VideoCallWindow() {
     
     // Start timer if not already running
     if (!timerRef.current) {
-      timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000)
+      timerRef.current = setInterval(() => {
+        durationRef.current += 1
+        setDuration((d) => d + 1)
+      }, 1000)
     }
     
     return () => {
@@ -205,35 +217,30 @@ export default function VideoCallWindow() {
     return () => {
       if (statusPollRef.current) clearInterval(statusPollRef.current)
     }
-  }, [callId, status])
+  }, [callId, status, cleanUp])
 
   /** WebRTC signaling handlers - poll database instead of Socket.IO */
   useEffect(() => {
-    if (!callId) return
+    if (!callId || !peerRef.current) return
 
     const pollSignals = async () => {
       try {
         const res = await fetch(`/api/video-calls/${callId}/signal`)
         if (!res.ok) return
         
-        const signals = await res.json()
-        for (const signal of signals) {
-          const id = `${signal.fromUserId}-${signal.timestamp}-${signal.type}`
-          if (processedSignalsRef.current.has(id)) continue
-          processedSignalsRef.current.add(id)
+        const signals: Array<{ fromUserId: string; id: string; type: string; data: unknown }> = await res.json()
+        signals.forEach((signal) => {
+          try {
+            const id = `${signal.fromUserId}-${signal.id}-${signal.type}`
+            if (processedSignalsRef.current.has(id)) return
+            processedSignalsRef.current.add(id)
 
-          if (signal.type === 'offer') {
-            if (status !== 'active' && status !== 'incoming') return
-            const stream = localStreamRef.current || await startLocalStream()
-            if (!stream) return
-            if (!peerRef.current) createPeer(stream, false)
-            peerRef.current?.signal(signal.data)
-          } else if (signal.type === 'answer') {
-            peerRef.current?.signal(signal.data)
-          } else if (signal.type === 'candidate') {
-            peerRef.current?.signal(signal.data)
+            if (!peerRef.current) return
+            peerRef.current.signal(signal.data)
+          } catch (err) {
+            console.debug('Signal error:', err)
           }
-        }
+        })
       } catch (err) {
         console.debug('Signal poll error:', err)
       }
@@ -248,7 +255,7 @@ export default function VideoCallWindow() {
     return () => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current)
     }
-  }, [callId, status, startLocalStream, createPeer]) // eslint-disable-line
+  }, [callId])
 
   const handleMuteToggle = useCallback(() => {
     // Calculate new muted state BEFORE toggling
