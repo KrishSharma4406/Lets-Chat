@@ -228,7 +228,8 @@ export default function VideoCallWindow() {
         const res = await fetch(`/api/video-calls/${callId}/signal`)
         if (!res.ok) return
         
-        const signals: Array<{ fromUserId: string; id: string; type: string; data: unknown }> = await res.json()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const signals: Array<{ fromUserId: string; id: string; type: string; data: any }> = await res.json()
         signals.forEach((signal) => {
           try {
             const id = `${signal.fromUserId}-${signal.id}-${signal.type}`
