@@ -9,9 +9,16 @@ interface Params { params: Promise<{ conversationId: string }> }
 export async function GET(req: Request, { params }: Params) {
   try {
     const session = await getServerSession(authOptions)
+    
+    if (!session) {
+      console.warn('[GET /messages] No session found')
+      console.warn('[GET /messages] Cookies:', req.headers.get('cookie')?.substring(0, 100))
+      return NextResponse.json({ error: 'Session not found' }, { status: 401 })
+    }
+    
     if (!session?.user?.id) {
-      console.warn('[GET /messages] Unauthorized - no session')
-      return new NextResponse('Unauthorized', { status: 401 })
+      console.warn('[GET /messages] Unauthorized - no user id in session')
+      return NextResponse.json({ error: 'User ID not found in session' }, { status: 401 })
     }
     
     const { conversationId } = await params

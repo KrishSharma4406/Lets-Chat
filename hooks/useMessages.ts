@@ -75,6 +75,13 @@ export function useMessages(conversationId: string | null) {
             
             const data: Message[] = await res.json()
             console.log('[useMessages] messages received:', data.length)
+            
+            // Defensive check: ensure data is an array
+            if (!Array.isArray(data)) {
+                console.error('[useMessages] API returned non-array data:', data)
+                setHasMore(false)
+                return
+            }
 
             if (data.length < PAGE_SIZE) setHasMore(false)
             if (data.length > 0) cursorRef.current = data[data.length - 1].id

@@ -22,7 +22,7 @@ const getAIResponse = async (userMessage: string): Promise<string> => {
 
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: {
@@ -54,6 +54,11 @@ const getAIResponse = async (userMessage: string): Promise<string> => {
 
     if (!response.ok) {
       const error = await response.json()
+      console.error('[AI Assistant] Gemini API Error Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: error,
+      })
       throw new Error(`Gemini API error: ${error.error?.message || response.statusText}`)
     }
 

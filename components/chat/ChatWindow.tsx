@@ -68,8 +68,17 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
       
       fetch('/api/ai-assistant')
         .then(r => r.json())
-        .then((messages: any[]) => {
-          const formattedMessages: Message[] = messages.map(msg => ({
+        .then((data: any) => {
+          // Ensure data is an array (handle various response formats)
+          const messagesArray = Array.isArray(data) ? data : (data?.messages || data?.allMessages || [])
+          
+          if (!Array.isArray(messagesArray)) {
+            console.warn('[ChatWindow] AI Assistant returned non-array data:', data)
+            setAiMessages([])
+            return
+          }
+          
+          const formattedMessages: Message[] = messagesArray.map(msg => ({
             id: msg.id,
             content: msg.content,
             createdAt: msg.createdAt,
@@ -487,7 +496,7 @@ export default function ChatWindow({ conversationId, onBack }: Props) {
           </div>
         )}
 
-        {(isAiAssistant ? aiMessages : messages).map((msg, idx) => {
+        {Array.isArray(isAiAssistant ? aiMessages : messages) && (isAiAssistant ? aiMessages : messages).map((msg, idx) => {
           const messageList = isAiAssistant ? aiMessages : messages
           const isOwn = msg.sender.id === currentUserId || (isAiAssistant && msg.sender.id === currentUserId)
           const prevMsg = messageList[idx - 1]
